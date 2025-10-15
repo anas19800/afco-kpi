@@ -1,0 +1,81 @@
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+
+model Brand {
+  id    String @id @default(cuid())
+  code  String @unique
+  name  String
+  color String?
+  actuals     Actual[]
+  targetBands TargetBand[]
+}
+
+model City {
+  id    String @id @default(cuid())
+  name  String
+  region String?
+  actuals     Actual[]
+  targetBands TargetBand[]
+}
+
+model KpiDefinition {
+  id        String @id @default(cuid())
+  code      String @unique
+  name_ar   String
+  name_en   String
+  unit_type String
+  direction String
+  description String?
+  owner_dept  String?
+  normalizePct100 Boolean @default(true)
+  actuals     Actual[]
+  targetBands TargetBand[]
+}
+
+model TargetBand {
+  id          String  @id @default(cuid())
+  kpiId       String
+  brandId     String?
+  cityId      String?
+  period_type String
+  period_key  String
+  level4      Float
+  level3      Float
+  level2      Float
+  level1      Float
+  kpi   KpiDefinition @relation(fields: [kpiId], references: [id])
+  brand Brand? @relation(fields: [brandId], references: [id])
+  city  City?  @relation(fields: [cityId], references: [id])
+  @@index([kpiId, brandId, cityId, period_key])
+}
+
+model Actual {
+  id         String @id @default(cuid())
+  kpiId      String
+  brandId    String
+  cityId     String?
+  period_key String
+  value      Float
+  source     String
+  notes      String?
+  kpi   KpiDefinition @relation(fields: [kpiId], references: [id])
+  brand Brand @relation(fields: [brandId], references: [id])
+  city  City? @relation(fields: [cityId], references: [id])
+  @@index([kpiId, brandId, cityId, period_key])
+}
+
+model User {
+  id    String @id @default(cuid())
+  email String @unique
+  name  String?
+  role  String @default("Viewer")
+}
+
+model AuditLog {
+  id     String @id @default(cuid())
+  entity String
+  before Json?
+  after  Json?
+  by     String
+  at     DateTime @default(now())
+}
