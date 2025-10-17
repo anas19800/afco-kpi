@@ -1,3 +1,26 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+  font-family: 'IBM Plex Sans', 'IBM Plex Sans Arabic', sans-serif;
+}
+
+body {
+  @apply bg-slate-950 text-slate-100 min-h-screen;
+}
+
+a {
+  @apply text-sky-400 hover:text-sky-300;
+}
+
+.table-auto td,
+.table-auto th {
+  @apply px-3 py-2;
+}
+
+.lang-ar {
+  direction: rtl;
+  font-family: 'IBM Plex Sans Arabic', sans-serif;
+}

@@ -1,52 +1,63 @@
-'use client'
-import { useMemo } from 'react'
-import { colorClass } from '@/lib/kpiColoring'
-import { formatByUnitType } from '@/lib/units'
+'use client';
 
-type Cell = {
-  period_key: string,
-  brand_code: string,
-  value: number|null,
-  unit_type: string,
-  direction: 'HIGH'|'LOW',
-  bands: { level4:number; level3:number; level2:number; level1:number }
-}
+import { HeatmapRow } from '@/lib/types';
+import { colorClass } from '@/lib/kpiColoring';
+import { formatValue } from '@/lib/units';
+import { useLocale } from './providers/LocaleProvider';
 
-export default function KpiHeatmap({ data }:{ data: Cell[] }){
-  const months = useMemo(()=>Array.from(new Set(data.map(d=>d.period_key))).sort(),[data])
-  const brands = useMemo(()=>Array.from(new Set(data.map(d=>d.brand_code))).sort(),[data])
-  const get = (m:string,b:string)=>data.find(d=>d.period_key===m && d.brand_code===b)
-
+export function KpiHeatmap({ rows }: { rows: HeatmapRow[] }) {
+  const { locale } = useLocale();
+  const brands = rows[0]?.cells.map((cell) => ({ id: cell.brandId, name: cell.brandName })) ?? [];
   return (
-    <div className="overflow-auto border rounded-xl">
-      <table className="min-w-[800px] w-full text-sm">
+    <div className="overflow-x-auto">
+      <table className={`table-auto min-w-full divide-y divide-slate-800 ${locale === 'ar' ? 'lang-ar' : ''}`}>
         <thead>
           <tr>
-            <th className="sticky left-0 bg-white z-10 p-2">Month \ Brand</th>
-            {brands.map(b=> <th key={b} className="p-2 text-center">{b}</th>)}
+            <th className="text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+              {locale === 'ar' ? 'الشهر' : 'Month'}
+            </th>
+            {brands.map((brand) => (
+              <th key={brand.id} className="text-left text-xs font-semibold uppercase tracking-wide text-slate-400">
+                {brand.name}
+              </th>
+            ))}
           </tr>
         </thead>
-        <tbody>
-          {months.map(m=> (
-            <tr key={m}>
-              <td className="sticky left-0 bg-white z-10 p-2 font-medium">{m}</td>
-              {brands.map(b=>{
-                const cell = get(m,b)
-                if(!cell) return <td key={b} className="p-2 text-center">-</td>
-                const cls = colorClass(cell.value as any, cell.bands, cell.direction)
+        <tbody className="divide-y divide-slate-800">
+          {rows.map((row) => (
+            <tr key={row.periodKey} className="align-top">
+              <td className="whitespace-nowrap text-sm font-medium text-slate-200">{row.periodKey}</td>
+              {row.cells.map((cell) => {
+                const color = cell.bands
+                  ? colorClass(cell.value, cell.bands, cell.direction, {
+                      treatZeroAsEmpty: cell.zeroIsEmpty
+                    })
+                  : 'none';
+                const colorStyles: Record<string, string> = {
+                  'level-1': 'bg-kpi-level-1/30 border-kpi-level-1/60',
+                  'level-2': 'bg-kpi-level-2/30 border-kpi-level-2/60',
+                  'level-3': 'bg-kpi-level-3/30 border-kpi-level-3/60',
+                  'level-4': 'bg-kpi-level-4/30 border-kpi-level-4/60',
+                  none: 'bg-slate-900/60 border-slate-800'
+                };
                 return (
-                  <td key={b} className={`p-2 text-center rounded ${
-                    cls==='level-4'?'bg-green-600 text-white':
-                    cls==='level-3'?'bg-green-300':
-                    cls==='level-2'?'bg-orange-300':
-                    cls==='level-1'?'bg-red-500 text-white':'bg-gray-100'
-                  }`} title={`${b} ${m}: ${cell.value}`}>{ cell.value==null?'-':formatByUnitType(cell.value, cell.unit_type) }</td>
-                )
+                  <td key={cell.brandId} className={`border text-sm text-slate-100 ${colorStyles[color]}`}>
+                    <div className="flex flex-col gap-1">
+                      <span className="font-semibold">{formatValue(cell.value, cell.unitType, { locale })}</span>
+                      {cell.bands && (
+                        <span className="text-xs text-slate-300">
+                          L4 {cell.bands.level4.toFixed(1)} / L3 {cell.bands.level3.toFixed(1)} / L2{' '}
+                          {cell.bands.level2.toFixed(1)}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                );
               })}
             </tr>
           ))}
         </tbody>
       </table>
     </div>
-  )
+  );
 }

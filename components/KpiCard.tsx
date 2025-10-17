@@ -1,10 +1,43 @@
-export function KpiCard({ title, value, hint, color }:{ title:string, value:string|number, hint?:string, color?:'green'|'red'|'orange'|'gray' }){
-  const bg = color==='green'?'bg-green-600 text-white':color==='red'?'bg-red-600 text-white':color==='orange'?'bg-orange-500 text-white':'bg-gray-100'
+import { colorClass } from '@/lib/kpiColoring';
+import { formatValue, UnitType } from '@/lib/units';
+import { Direction } from '@prisma/client';
+
+export function KpiCard({
+  title,
+  subtitle,
+  value,
+  unitType,
+  direction,
+  bands
+}: {
+  title: string;
+  subtitle?: string;
+  value: number | null;
+  unitType: UnitType;
+  direction: Direction;
+  bands?: {
+    level4: number;
+    level3: number;
+    level2: number;
+    level1: number;
+  } | null;
+}) {
+  const color = bands ? colorClass(value, bands, direction) : 'none';
+  const colorStyles: Record<string, string> = {
+    'level-1': 'bg-kpi-level-1/20 border-kpi-level-1/60',
+    'level-2': 'bg-kpi-level-2/20 border-kpi-level-2/60',
+    'level-3': 'bg-kpi-level-3/20 border-kpi-level-3/60',
+    'level-4': 'bg-kpi-level-4/20 border-kpi-level-4/60',
+    none: 'bg-slate-900 border-slate-800'
+  };
+
   return (
-    <div className={`rounded-2xl p-4 shadow ${bg}`}>
-      <div className="text-xs opacity-80">{title}</div>
-      <div className="text-2xl font-semibold">{value}</div>
-      {hint && <div className="text-xs mt-1 opacity-80">{hint}</div>}
+    <div className={`rounded-lg border px-4 py-3 transition ${colorStyles[color]}`}>
+      <p className="text-xs uppercase tracking-wide text-slate-400">{subtitle}</p>
+      <h3 className="mt-1 text-lg font-semibold text-slate-100">{title}</h3>
+      <p className="mt-2 text-2xl font-bold text-slate-50">
+        {value === null ? '—' : formatValue(value, unitType, { locale: 'en' })}
+      </p>
     </div>
-  )
+  );
 }

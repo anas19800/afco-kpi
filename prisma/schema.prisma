@@ -1,81 +1,137 @@
-generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Direction {
+  HIGH
+  LOW
+}
+
+enum PeriodType {
+  Monthly
+  Quarterly
+  Yearly
+}
+
+enum ActualSource {
+  Manual
+  PowerQuery
+  API
+}
+
+enum Role {
+  Admin
+  Analyst
+  Viewer
+}
 
 model Brand {
-  id    String @id @default(cuid())
-  code  String @unique
-  name  String
-  color String?
-  actuals     Actual[]
-  targetBands TargetBand[]
+  id     String   @id @default(cuid())
+  code   String   @unique
+  name   String
+  color  String
+  targets TargetBand[]
+  actuals Actual[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model City {
-  id    String @id @default(cuid())
-  name  String
+  id     String   @id @default(cuid())
+  name   String
   region String?
-  actuals     Actual[]
-  targetBands TargetBand[]
+  targets TargetBand[]
+  actuals Actual[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model KpiDefinition {
-  id        String @id @default(cuid())
-  code      String @unique
-  name_ar   String
-  name_en   String
-  unit_type String
-  direction String
+  id          String      @id @default(cuid())
+  code        String      @unique
+  name_ar     String
+  name_en     String
+  unit_type   String
+  direction   Direction
   description String?
   owner_dept  String?
-  normalizePct100 Boolean @default(true)
+  zero_is_empty Boolean   @default(true)
+  pct_scale   Int         @default(100) // 100 or 1
+  targets     TargetBand[]
   actuals     Actual[]
-  targetBands TargetBand[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
 }
 
 model TargetBand {
-  id          String  @id @default(cuid())
+  id          String     @id @default(cuid())
   kpiId       String
   brandId     String?
   cityId      String?
-  period_type String
+  period_type PeriodType
   period_key  String
   level4      Float
   level3      Float
   level2      Float
   level1      Float
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
   kpi   KpiDefinition @relation(fields: [kpiId], references: [id])
-  brand Brand? @relation(fields: [brandId], references: [id])
-  city  City?  @relation(fields: [cityId], references: [id])
+  brand Brand?        @relation(fields: [brandId], references: [id])
+  city  City?         @relation(fields: [cityId], references: [id])
+
   @@index([kpiId, brandId, cityId, period_key])
+  @@unique([kpiId, brandId, cityId, period_key])
 }
 
 model Actual {
-  id         String @id @default(cuid())
+  id         String       @id @default(cuid())
   kpiId      String
   brandId    String
   cityId     String?
   period_key String
   value      Float
-  source     String
+  source     ActualSource
   notes      String?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
   kpi   KpiDefinition @relation(fields: [kpiId], references: [id])
-  brand Brand @relation(fields: [brandId], references: [id])
-  city  City? @relation(fields: [cityId], references: [id])
+  brand Brand         @relation(fields: [brandId], references: [id])
+  city  City?         @relation(fields: [cityId], references: [id])
+
   @@index([kpiId, brandId, cityId, period_key])
+  @@unique([kpiId, brandId, cityId, period_key])
+}
+
+model UnitMap {
+  code        String @id
+  numberFormat String
 }
 
 model User {
-  id    String @id @default(cuid())
-  email String @unique
-  name  String?
-  role  String @default("Viewer")
+  id       String @id @default(cuid())
+  email    String @unique
+  name     String
+  role     Role
+  brands   String[] @default([])
+  cities   String[] @default([])
+  password String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model AuditLog {
-  id     String @id @default(cuid())
-  entity String
-  before Json?
-  after  Json?
-  by     String
-  at     DateTime @default(now())
+  id      String   @id @default(cuid())
+  entity  String
+  before  Json?
+  after   Json?
+  by      String
+  at      DateTime @default(now())
 }
