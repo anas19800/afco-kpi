@@ -6,21 +6,20 @@
 
 - Node.js 18 أو أحدث
 - مدير الحزم [pnpm](https://pnpm.io/)
-- قاعدة بيانات PostgreSQL (انظر ملف ‎`prisma/schema.prisma`‎ للتفاصيل)
 
 ## خطوات التشغيل محليًا
 
-1. انسخ ملف البيئة المحلية وحدث بيانات الاتصال:
+1. أنشئ ملف البيئة من القالب الجاهز (يستخدم SQLite محليًا):
    ```bash
    cp .env.example .env.local
-   # حدث قيمة DATABASE_URL لتشير إلى قاعدة بيانات PostgreSQL صالحة
    ```
 2. ثبّت الاعتمادات: `pnpm install`
-3. أنشئ الجداول وطبّق بيانات تجريبية:
+3. أنشئ الجداول وطبّق البيانات التجريبية:
    ```bash
-   pnpm prisma migrate dev
+   pnpm prisma db push
    pnpm prisma db seed
    ```
+   - يمكن استبدال `db push` بـ `prisma migrate dev` إذا رغبت في إنشاء ملف هجرة حقيقي.
 4. شغّل خادم التطوير: `pnpm dev`
 5. افتح المتصفح على `http://localhost:3000` لمعاينة لوحة التحكم.
 

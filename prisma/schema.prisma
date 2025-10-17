@@ -1,5 +1,8 @@
 generator client { provider = "prisma-client-js" }
-datasource db { provider = "postgresql"; url = env("DATABASE_URL") }
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
 
 model Brand {
   id    String @id @default(cuid())
@@ -11,9 +14,9 @@ model Brand {
 }
 
 model City {
-  id    String @id @default(cuid())
-  name  String
-  region String?
+  id          String @id @default(cuid())
+  name        String @unique
+  region      String?
   actuals     Actual[]
   targetBands TargetBand[]
 }
@@ -47,6 +50,7 @@ model TargetBand {
   brand Brand? @relation(fields: [brandId], references: [id])
   city  City?  @relation(fields: [cityId], references: [id])
   @@index([kpiId, brandId, cityId, period_key])
+  @@unique([kpiId, period_type, period_key])
 }
 
 model Actual {
@@ -62,6 +66,7 @@ model Actual {
   brand Brand @relation(fields: [brandId], references: [id])
   city  City? @relation(fields: [cityId], references: [id])
   @@index([kpiId, brandId, cityId, period_key])
+  @@unique([kpiId, brandId, cityId, period_key])
 }
 
 model User {
