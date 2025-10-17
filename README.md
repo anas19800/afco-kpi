@@ -1,12 +1,53 @@
-# AFCO KPI (Next.js 14 + Prisma)
-Quick-start package. Steps:
-1) `cp .env.example .env.local` and edit DATABASE_URL
-2) `pnpm i`
-3) `pnpm prisma migrate dev`
-4) `pnpm prisma db seed`
-5) `pnpm dev` => http://localhost:3000
+# AFCO KPI
 
-## Quick Links
+لوحة مؤشرات مبنية على **Next.js 14** مع **Prisma** وواجهة عربية افتراضيًا. يتضمن المشروع خريطة حرارة للعلامات التجارية وبطاقات KPI مع ألوان ديناميكية تعتمد على عتبات الأداء.
 
-- [الصفحة الرئيسية للتطبيق (app/(dashboard)/page.tsx)](https://github.com/anas19800/afco-kpi/blob/main/app/%28dashboard%29/page.tsx)
-- [مكوّن بطاقة KPI (components/kpis/KpiCard.tsx)](https://github.com/anas19800/afco-kpi/blob/main/components/kpis/KpiCard.tsx)
+## المتطلبات الأساسية
+
+- Node.js 18 أو أحدث
+- مدير الحزم [pnpm](https://pnpm.io/)
+- قاعدة بيانات PostgreSQL (انظر ملف ‎`prisma/schema.prisma`‎ للتفاصيل)
+
+## خطوات التشغيل محليًا
+
+1. انسخ ملف البيئة المحلية وحدث بيانات الاتصال:
+   ```bash
+   cp .env.example .env.local
+   # حدث قيمة DATABASE_URL لتشير إلى قاعدة بيانات PostgreSQL صالحة
+   ```
+2. ثبّت الاعتمادات: `pnpm install`
+3. أنشئ الجداول وطبّق بيانات تجريبية:
+   ```bash
+   pnpm prisma migrate dev
+   pnpm prisma db seed
+   ```
+4. شغّل خادم التطوير: `pnpm dev`
+5. افتح المتصفح على `http://localhost:3000` لمعاينة لوحة التحكم.
+
+> **نصيحة:** استخدم `pnpm prisma studio` لاستعراض الجداول والتأكد من أن البيانات متوافرة قبل زيارة الصفحة الرئيسية.
+
+## فحوصات الجودة
+
+- `pnpm test` لتشغيل اختبارات Vitest الخاصة بوحدات التنسيق وتلوين الخلايا.
+- `pnpm lint` لتشغيل ESLint (إن وُجد ضمن الإعدادات المحلية).
+- `pnpm build` للتأكد من نجاح بناء تطبيق Next.js قبل النشر.
+
+## نظرة على هيكل المشروع
+
+- `app/(dashboard)/page.tsx`: يجلب التعريفات والبيانات الفعلية من Prisma ويجهّزها لواجهة الخريطة الحرارية.
+- `components/KpiHeatmap.tsx`: يعرض جدول الأداء بالاعتماد على دالة ‎`colorClass`‎ لتلوين الخلايا حسب الاتجاه والعتبات.
+- `components/KpiCard.tsx`: بطاقة مبسطة لعرض القيم السريعة بالاعتماد على اللون المحدد.
+- `lib/kpiColoring.ts`: منطق تعيين الألوان بناءً على اتجاه KPI ومستويات الأداء.
+- `lib/units.ts`: دوال تنسيق القيم بحسب نوع الوحدة (نسبة، عملة سعودية، أرقام، نص).
+- `app/api/*`: مسارات Next.js API التي تعرض البيانات الخام لكافة الكيانات (KPIs، القيم الفعلية، نطاقات الأهداف).
+
+## روابط مفيدة
+
+- [الصفحة الرئيسية للتطبيق](https://github.com/anas19800/afco-kpi/blob/main/app/%28dashboard%29/page.tsx)
+- [مكون بطاقة KPI](https://github.com/anas19800/afco-kpi/blob/main/components/KpiCard.tsx)
+- [مكون خريطة الحرارة](https://github.com/anas19800/afco-kpi/blob/main/components/KpiHeatmap.tsx)
+
+## استكشاف الأخطاء وإصلاحها
+
+- إذا ظهرت رسالة "No KPI" على الصفحة الرئيسية فتأكد من تنفيذ أوامر التهيئة وقاعدة البيانات تحتوي على تعريف KPI بالرمز `SALES_ACH`.
+- في حال لم تُعرض الألوان كما هو متوقع، استخدم الاختبارات في ‎`lib/__tests__/kpiColoring.test.ts`‎ للتأكد من العتبات، أو عدّل قيم ‎`targetBand`‎ في قاعدة البيانات.

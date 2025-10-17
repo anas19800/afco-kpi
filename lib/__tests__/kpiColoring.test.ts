@@ -5,11 +5,14 @@ import { colorClass } from '../kpiColoring'
 const bands = { level4: 90, level3: 75, level2: 50, level1: 0 }
 
 describe('colorClass', () => {
-  it('returns none for empty values', () => {
+  it('returns none for empty or non-numeric values', () => {
     expect(colorClass(null, bands, 'HIGH')).toBe('none')
     expect(colorClass(undefined, bands, 'HIGH')).toBe('none')
     expect(colorClass('', bands, 'HIGH')).toBe('none')
+    expect(colorClass('   ', bands, 'HIGH')).toBe('none')
+    expect(colorClass('NaN', bands, 'HIGH')).toBe('none')
     expect(colorClass(0, bands, 'HIGH')).toBe('none')
+    expect(colorClass('0', bands, 'HIGH')).toBe('none')
   })
 
   it('evaluates HIGH direction thresholds from top to bottom', () => {
@@ -17,6 +20,7 @@ describe('colorClass', () => {
     expect(colorClass(80, bands, 'HIGH', false)).toBe('level-3')
     expect(colorClass(60, bands, 'HIGH', false)).toBe('level-2')
     expect(colorClass(10, bands, 'HIGH', false)).toBe('level-1')
+    expect(colorClass('75', bands, 'HIGH', false)).toBe('level-3')
   })
 
   it('evaluates LOW direction thresholds from bottom to top', () => {
@@ -25,5 +29,14 @@ describe('colorClass', () => {
     expect(colorClass(15, inverted, 'LOW', false)).toBe('level-3')
     expect(colorClass(25, inverted, 'LOW', false)).toBe('level-2')
     expect(colorClass(50, inverted, 'LOW', false)).toBe('level-1')
+  })
+
+  it('returns none when no bands are provided', () => {
+    expect(colorClass(50, null as any, 'HIGH')).toBe('none')
+    expect(colorClass(50, undefined as any, 'LOW')).toBe('none')
+  })
+
+  it('allows treating zero as a real value', () => {
+    expect(colorClass(0, bands, 'HIGH', false)).toBe('level-1')
   })
 })
