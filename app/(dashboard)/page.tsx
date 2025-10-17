@@ -1,24 +1,62 @@
-import { prisma } from '@/lib/db'
 import KpiHeatmap from '@/components/KpiHeatmap'
 import { KpiCard } from '@/components/KpiCard'
+import { sampleData } from '@/lib/sampleData'
+import { formatByUnitType } from '@/lib/units'
 
-export default async function DashboardPage(){
-  const kpi = await prisma.kpiDefinition.findUnique({ where: { code: 'SALES_ACH' } })
-  if(!kpi) return <div>No KPI</div>
+export default function DashboardPage() {
+  const { kpiDefinition, heatmapCells, months, brands } = sampleData
 
-  const actuals = await prisma.$queryRaw<any[]>`SELECT a.period_key, b.code as brand_code, a.value FROM "Actual" a JOIN "Brand" b ON a."brandId"=b.id WHERE a."kpiId"=${kpi.id}`
-  const bandsRaw = await prisma.targetBand.findMany({ where: { kpiId: kpi.id, period_type: 'Monthly' } })
-  const bandByPeriod: Record<string,{ level4:number; level3:number; level2:number; level1:number }> = {}
-  for(const r of bandsRaw){ bandByPeriod[r.period_key] = { level4:r.level4, level3:r.level3, level2:r.level2, level1:r.level1 } }
-  const data = actuals.map(a=>({ period_key:a.period_key, brand_code:a.brand_code, value:Number(a.value), unit_type:kpi.unit_type, direction:kpi.direction as any, bands: bandByPeriod[a.period_key] || {level4:0,level3:0,level2:0,level1:0} }))
+  const brandLookup = new Map(brands.map((brand) => [brand.code, brand]))
+  const populatedCells = heatmapCells.filter((cell) => cell.value != null)
+  const totalCells = heatmapCells.length
+
+  const averageValue =
+    populatedCells.reduce((sum, cell) => sum + (cell.value ?? 0), 0) /
+    (populatedCells.length || 1)
+
+  const latestMonth = months[months.length - 1]
+  const latestLeaders = populatedCells
+    .filter((cell) => cell.period_key === latestMonth)
+    .sort((a, b) => (b.value ?? 0) - (a.value ?? 0))
+
+  const topPerformer = latestLeaders[0]
+  const topBrand = topPerformer ? brandLookup.get(topPerformer.brand_code) : undefined
 
   return (
     <div className="space-y-6 p-6">
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <KpiCard title="Cells" value={actuals.length} color="green" />
-        <KpiCard title="Locale" value="AR" />
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard
+          title="KPI"
+          value={kpiDefinition.name_en}
+          hint={`(${kpiDefinition.name_ar})`}
+          color="gray"
+        />
+        <KpiCard
+          title="Latest leader"
+          value={topBrand ? topBrand.name : '—'}
+          hint={
+            topPerformer
+              ? `${topPerformer.brand_code} • ${latestMonth} • ${formatByUnitType(
+                  topPerformer.value,
+                  kpiDefinition.unit_type,
+                )}`
+              : undefined
+          }
+          color="green"
+        />
+        <KpiCard
+          title="Tracked brands"
+          value={brands.length}
+          hint="Included in the heatmap"
+          color="orange"
+        />
+        <KpiCard
+          title="Average performance"
+          value={formatByUnitType(Number(averageValue.toFixed(1)), kpiDefinition.unit_type)}
+          hint={`${totalCells} total data points`}
+        />
       </div>
-      <KpiHeatmap data={data} />
+      <KpiHeatmap data={heatmapCells} />
     </div>
   )
 }

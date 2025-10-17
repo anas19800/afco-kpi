@@ -6,12 +6,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "seed": "ts-node prisma/seed.ts",
     "test": "vitest run",
     "test:ui": "vitest"
-  },
-  "prisma": {
-    "seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
     "@prisma/client": "5.19.1",
