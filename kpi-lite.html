@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI Lite Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .heat-level-1 { background-color: #fee2e2; }
+    .heat-level-2 { background-color: #fef3c7; }
+    .heat-level-3 { background-color: #d1fae5; }
+    .heat-level-4 { background-color: #bbf7d0; }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <div class="min-h-screen p-4 md:p-8" id="app"></div>
+
+  <template id="quick-edit-template">
+    <div class="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div class="bg-white rounded-lg shadow-xl w-full max-w-lg p-6 space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold" data-i18n="quickEditTitle"></h2>
+          <button type="button" class="text-slate-500 hover:text-slate-700" data-role="close">
+            &times;
+          </button>
+        </div>
+        <form class="space-y-4" data-role="form">
+          <div>
+            <label class="block text-sm font-medium mb-1" data-i18n="period"></label>
+            <input type="month" name="period_key" class="w-full border border-slate-300 rounded px-3 py-2" required />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1" data-i18n="brand"></label>
+            <select name="brandId" class="w-full border border-slate-300 rounded px-3 py-2" required></select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1" data-i18n="city"></label>
+            <select name="cityId" class="w-full border border-slate-300 rounded px-3 py-2">
+              <option value="" data-i18n="noCity"></option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1" data-i18n="value"></label>
+            <input type="number" name="value" step="0.01" class="w-full border border-slate-300 rounded px-3 py-2" required />
+          </div>
+          <div class="flex justify-end gap-2">
+            <button type="button" data-role="close" class="px-4 py-2 border border-slate-300 rounded hover:bg-slate-100" data-i18n="cancel"></button>
+            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" data-i18n="save"></button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <script>
+    const TEXTS = {
+      en: {
+        title: 'KPI Lite Dashboard',
+        language: 'AR',
+        importCsv: 'Import CSV',
+        exportCsv: 'Export CSV',
+        resetData: 'Reset Data',
+        brand: 'Brand',
+        city: 'City',
+        kpi: 'KPI',
+        period: 'Period',
+        percentMode: 'Percent Mode',
+        quickEntry: 'Quick Entry',
+        legendTitle: 'Legend',
+        level: 'Level',
+        noColor: 'No Color',
+        cardsTitle: 'Summary',
+        heatmapTitle: 'Performance Heatmap',
+        quickEditTitle: 'Quick Update',
+        value: 'Value',
+        save: 'Save',
+        cancel: 'Cancel',
+        noCity: 'All Cities',
+        percent100: '0 - 100%',
+        percent1: '0 - 1',
+        totals: 'Cells',
+        directionHigh: 'High is better',
+        directionLow: 'Low is better',
+        cityAll: 'All Cities',
+        brandAll: 'All Brands',
+        kpiSelect: 'Select KPI',
+        periodLabel: 'Month',
+        importHelp: 'Import CSV to update actuals instantly.',
+        exportHelp: 'Download filtered actuals as CSV.',
+        resetConfirm: 'Are you sure you want to reset data?'
+      },
+      ar: {
+        title: 'لوحة مؤشرات مبسطة',
+        language: 'EN',
+        importCsv: 'استيراد CSV',
+        exportCsv: 'تصدير CSV',
+        resetData: 'إعادة ضبط البيانات',
+        brand: 'العلامة',
+        city: 'المدينة',
+        kpi: 'المؤشر',
+        period: 'الفترة',
+        percentMode: 'وضع النسبة',
+        quickEntry: 'إدخال سريع',
+        legendTitle: 'المفتاح اللوني',
+        level: 'المستوى',
+        noColor: 'بدون لون',
+        cardsTitle: 'ملخص',
+        heatmapTitle: 'خريطة الأداء الحرارية',
+        quickEditTitle: 'تحديث سريع',
+        value: 'القيمة',
+        save: 'حفظ',
+        cancel: 'إلغاء',
+        noCity: 'كل المدن',
+        percent100: '0 - 100%',
+        percent1: '0 - 1',
+        totals: 'الخلايا',
+        directionHigh: 'الأعلى أفضل',
+        directionLow: 'الأقل أفضل',
+        cityAll: 'كل المدن',
+        brandAll: 'كل العلامات',
+        kpiSelect: 'اختر المؤشر',
+        periodLabel: 'الشهر',
+        importHelp: 'استورد ملف CSV لتحديث القيم فورًا.',
+        exportHelp: 'نزّل القيم الحالية كملف CSV.',
+        resetConfirm: 'هل أنت متأكد من إعادة الضبط؟'
+      }
+    };
+
+    const STORAGE_KEY = 'kpi-lite-db-v1';
+
+    const seedData = () => {
+      const brands = [
+        { id: 'b1', code: 'AFCO', name: 'AFCO', color: '#1d4ed8' },
+        { id: 'b2', code: 'LCP', name: 'LCP', color: '#dc2626' },
+        { id: 'b3', code: 'PSK', name: 'PSK', color: '#16a34a' },
+        { id: 'b4', code: 'OKA', name: 'OKA', color: '#9333ea' }
+      ];
+
+      const cities = [
+        { id: 'c1', name: 'الدمام', region: 'الشرقية' },
+        { id: 'c2', name: 'الرياض', region: 'الوسطى' },
+        { id: 'c3', name: 'جدة', region: 'الغربية' }
+      ];
+
+      const kpis = [
+        { id: 'k1', code: 'SALES_ACH', name_ar: 'تحقيق المبيعات %', name_en: 'Sales Achievement %', unit_type: '%', direction: 'HIGH', percentMode: '0_100' },
+        { id: 'k2', code: 'NET_PROFIT', name_ar: 'نمو صافي الربح %', name_en: 'Net Profit Growth %', unit_type: '%', direction: 'HIGH', percentMode: '0_100' },
+        { id: 'k3', code: 'FINES', name_ar: 'الغرامات', name_en: 'Fines', unit_type: 'SAR', direction: 'LOW', percentMode: '0_100' }
+      ];
+
+      const targetBands = [];
+      const year = 2025;
+      const generateBand = (kpiId, month, base) => ({
+        id: `${kpiId}-${month}`,
+        kpiId,
+        period_type: 'Monthly',
+        period_key: `${year}-${String(month).padStart(2, '0')}`,
+        level4: base * 1.1,
+        level3: base * 0.95,
+        level2: base * 0.85,
+        level1: base * 0.7
+      });
+
+      for (let m = 1; m <= 12; m++) {
+        targetBands.push(generateBand('k1', m, 85));
+        targetBands.push(generateBand('k2', m, 12));
+        targetBands.push({
+          id: `k3-${m}`,
+          kpiId: 'k3',
+          period_type: 'Monthly',
+          period_key: `${year}-${String(m).padStart(2, '0')}`,
+          level4: 10,
+          level3: 20,
+          level2: 30,
+          level1: 45
+        });
+      }
+
+      const actuals = [];
+      const randomValue = (min, max) => Math.round((Math.random() * (max - min) + min) * 100) / 100;
+      for (const brand of brands) {
+        for (let m = 1; m <= 12; m++) {
+          const period_key = `${year}-${String(m).padStart(2, '0')}`;
+          actuals.push({ id: `a-${brand.id}-k1-${m}`, kpiId: 'k1', brandId: brand.id, cityId: null, period_key, value: randomValue(70, 110), source: 'Manual' });
+          actuals.push({ id: `a-${brand.id}-k2-${m}`, kpiId: 'k2', brandId: brand.id, cityId: null, period_key, value: randomValue(5, 20), source: 'Manual' });
+          actuals.push({ id: `a-${brand.id}-k3-${m}`, kpiId: 'k3', brandId: brand.id, cityId: null, period_key, value: randomValue(5, 40), source: 'Manual' });
+        }
+      }
+
+      return { brands, cities, kpis, targetBands, actuals };
+    };
+
+    const dataAdapter = (() => {
+      const loadDB = () => {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) {
+          const seeded = seedData();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+          return seeded;
+        }
+        try {
+          return JSON.parse(stored);
+        } catch (e) {
+          console.warn('Failed to parse storage, reseeding', e);
+          const seeded = seedData();
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(seeded));
+          return seeded;
+        }
+      };
+
+      const saveDB = (db) => {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+      };
+
+      const upsertActual = (db, actual) => {
+        const existing = db.actuals.find(
+          (a) => a.kpiId === actual.kpiId && a.brandId === actual.brandId && a.period_key === actual.period_key && (a.cityId || null) === (actual.cityId || null)
+        );
+        if (existing) {
+          existing.value = actual.value;
+          existing.source = actual.source || existing.source;
+        } else {
+          actual.id = `a-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+          db.actuals.push(actual);
+        }
+        saveDB(db);
+      };
+
+      const reset = () => {
+        const seeded = seedData();
+        saveDB(seeded);
+        return seeded;
+      };
+
+      return { loadDB, saveDB, upsertActual, reset };
+    })();
+
+    const state = {
+      db: null,
+      lang: 'ar',
+      displayPercentMode: '0_100',
+      filters: {
+        brandId: 'all',
+        cityId: 'all',
+        kpiId: null,
+        period: '2025-01'
+      }
+    };
+
+    const $ = (selector, parent = document) => parent.querySelector(selector);
+    const $$ = (selector, parent = document) => Array.from(parent.querySelectorAll(selector));
+
+    const formatValue = (kpi, value) => {
+      if (value === null || value === undefined) return '';
+      const displayMode = state.displayPercentMode;
+      if (kpi.unit_type === '%') {
+        if (displayMode === '0_1' && kpi.percentMode === '0_100') {
+          return (value / 100).toFixed(2);
+        }
+        if (displayMode === '0_100' && kpi.percentMode === '0_1') {
+          return (value * 100).toFixed(2);
+        }
+      }
+      return Number(value).toFixed(2);
+    };
+
+    const parseInputValue = (kpi, input) => {
+      let value = parseFloat(input);
+      if (Number.isNaN(value)) return null;
+      if (kpi.unit_type === '%') {
+        if (state.displayPercentMode === '0_1' && kpi.percentMode === '0_100') {
+          value = value * 100;
+        }
+        if (state.displayPercentMode === '0_100' && kpi.percentMode === '0_1') {
+          value = value / 100;
+        }
+      }
+      return value;
+    };
+
+    const monthRange = (period) => {
+      const [year] = period.split('-');
+      const months = [];
+      for (let m = 1; m <= 12; m++) {
+        months.push(`${year}-${String(m).padStart(2, '0')}`);
+      }
+      return months;
+    };
+
+    const getTargetsFor = (kpiId, periodKey) => {
+      return state.db.targetBands.find((band) => band.kpiId === kpiId && band.period_key === periodKey) || null;
+    };
+
+    const getActualValue = (kpiId, brandId, periodKey) => {
+      const { cityId } = state.filters;
+      const actuals = state.db.actuals.filter((a) => a.kpiId === kpiId && a.brandId === brandId && a.period_key === periodKey);
+      if (!actuals.length) return null;
+      if (cityId && cityId !== 'all') {
+        const match = actuals.find((a) => a.cityId === cityId);
+        return match ? match.value : null;
+      }
+      const aggregate = actuals.find((a) => !a.cityId);
+      if (aggregate) return aggregate.value;
+      const values = actuals.map((a) => a.value);
+      return values.reduce((sum, v) => sum + v, 0) / values.length;
+    };
+
+    const getLevel = (kpi, targetBand, value) => {
+      if (!targetBand || value === null || value === undefined || value === 0) return null;
+      const { level4, level3, level2, level1 } = targetBand;
+      if (kpi.direction === 'HIGH') {
+        if (value >= level4) return 4;
+        if (value >= level3) return 3;
+        if (value >= level2) return 2;
+        return 1;
+      } else {
+        if (value <= level4) return 4;
+        if (value <= level3) return 3;
+        if (value <= level2) return 2;
+        return 1;
+      }
+    };
+
+    const renderApp = () => {
+      const container = document.getElementById('app');
+      container.innerHTML = '';
+
+      const section = document.createElement('div');
+      section.className = 'space-y-6';
+      section.innerHTML = `
+        <header class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-white rounded-lg shadow p-4">
+          <div>
+            <h1 class="text-2xl font-semibold" data-i18n="title"></h1>
+          </div>
+          <div class="flex flex-wrap gap-2 items-center">
+            <button id="lang-toggle" class="px-3 py-2 border border-slate-300 rounded hover:bg-slate-100"></button>
+            <label class="flex items-center gap-2 text-sm text-slate-600" title="Import">
+              <input type="file" id="csv-import" accept=".csv" class="hidden" />
+              <span class="px-3 py-2 border border-slate-300 rounded cursor-pointer hover:bg-slate-100" data-i18n="importCsv"></span>
+            </label>
+            <button id="export-btn" class="px-3 py-2 border border-slate-300 rounded hover:bg-slate-100" data-i18n="exportCsv"></button>
+            <button id="reset-btn" class="px-3 py-2 border border-rose-300 text-rose-600 rounded hover:bg-rose-50" data-i18n="resetData"></button>
+          </div>
+        </header>
+
+        <section class="bg-white rounded-lg shadow p-4 space-y-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div>
+              <label class="block text-xs uppercase tracking-wide text-slate-500" data-i18n="brand"></label>
+              <select id="filter-brand" class="w-full border border-slate-300 rounded px-2 py-2"></select>
+            </div>
+            <div>
+              <label class="block text-xs uppercase tracking-wide text-slate-500" data-i18n="city"></label>
+              <select id="filter-city" class="w-full border border-slate-300 rounded px-2 py-2"></select>
+            </div>
+            <div class="md:col-span-2">
+              <label class="block text-xs uppercase tracking-wide text-slate-500" data-i18n="kpi"></label>
+              <select id="filter-kpi" class="w-full border border-slate-300 rounded px-2 py-2"></select>
+            </div>
+            <div>
+              <label class="block text-xs uppercase tracking-wide text-slate-500" data-i18n="period"></label>
+              <input type="month" id="filter-period" class="w-full border border-slate-300 rounded px-2 py-2" />
+            </div>
+            <div>
+              <label class="block text-xs uppercase tracking-wide text-slate-500" data-i18n="percentMode"></label>
+              <select id="filter-percent" class="w-full border border-slate-300 rounded px-2 py-2">
+                <option value="0_100" data-i18n="percent100"></option>
+                <option value="0_1" data-i18n="percent1"></option>
+              </select>
+            </div>
+          </div>
+          <div class="flex justify-end">
+            <button id="quick-entry-btn" class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700" data-i18n="quickEntry"></button>
+          </div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow p-4 space-y-4">
+          <h2 class="text-lg font-semibold" data-i18n="legendTitle"></h2>
+          <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            ${[1,2,3,4].map(level => `
+              <div class="border border-slate-200 rounded p-3 flex items-center gap-3">
+                <span class="w-8 h-8 rounded heat-level-${level}"></span>
+                <div>
+                  <div class="text-sm font-semibold" data-i18n="level"></div>
+                  <div class="text-xs text-slate-500">${level}</div>
+                </div>
+              </div>
+            `).join('')}
+            <div class="border border-dashed border-slate-300 rounded p-3 flex items-center gap-3">
+              <span class="w-8 h-8 rounded border border-slate-200"></span>
+              <div>
+                <div class="text-sm font-semibold" data-i18n="noColor"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow p-4 space-y-4">
+          <h2 class="text-lg font-semibold" data-i18n="cardsTitle"></h2>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-4" id="summary-cards"></div>
+        </section>
+
+        <section class="bg-white rounded-lg shadow p-4 space-y-4">
+          <div class="flex items-center justify-between">
+            <h2 class="text-lg font-semibold" data-i18n="heatmapTitle"></h2>
+            <span class="text-xs text-slate-500" id="heatmap-subtitle"></span>
+          </div>
+          <div class="overflow-auto">
+            <table class="min-w-full text-sm" id="heatmap-table"></table>
+          </div>
+        </section>
+      `;
+
+      container.appendChild(section);
+
+      bindControls();
+      applyTranslations();
+      populateFilters();
+      renderHeatmap();
+    };
+
+    const applyTranslations = () => {
+      const dir = state.lang === 'ar' ? 'rtl' : 'ltr';
+      const langAttr = state.lang === 'ar' ? 'ar' : 'en';
+      document.documentElement.dir = dir;
+      document.documentElement.lang = langAttr;
+      document.body.classList.toggle('text-right', dir === 'rtl');
+      document.body.classList.toggle('text-left', dir === 'ltr');
+
+      $$('[data-i18n]').forEach((el) => {
+        const key = el.getAttribute('data-i18n');
+        const text = TEXTS[state.lang][key];
+        if (text) {
+          if (el.tagName === 'INPUT' || el.tagName === 'SELECT' || el.tagName === 'TEXTAREA') {
+            el.placeholder = text;
+          } else {
+            el.textContent = text;
+          }
+        }
+      });
+
+      const langBtn = document.getElementById('lang-toggle');
+      if (langBtn) {
+        langBtn.textContent = TEXTS[state.lang].language;
+      }
+
+      const percentSelect = document.getElementById('filter-percent');
+      if (percentSelect) {
+        $$('option', percentSelect).forEach((option) => {
+          const key = option.getAttribute('data-i18n');
+          if (key) option.textContent = TEXTS[state.lang][key];
+        });
+        percentSelect.value = state.displayPercentMode;
+      }
+    };
+
+    const populateFilters = () => {
+      const brandSelect = document.getElementById('filter-brand');
+      brandSelect.innerHTML = `<option value="all">${TEXTS[state.lang].brandAll}</option>` +
+        state.db.brands.map((brand) => `<option value="${brand.id}">${brand.name}</option>`).join('');
+      brandSelect.value = state.filters.brandId;
+
+      const citySelect = document.getElementById('filter-city');
+      citySelect.innerHTML = `<option value="all">${TEXTS[state.lang].cityAll}</option>` +
+        state.db.cities.map((city) => `<option value="${city.id}">${city.name}</option>`).join('');
+      citySelect.value = state.filters.cityId;
+
+      const kpiSelect = document.getElementById('filter-kpi');
+      kpiSelect.innerHTML = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${state.lang === 'ar' ? kpi.name_ar : kpi.name_en}</option>`).join('');
+      if (!state.filters.kpiId) state.filters.kpiId = state.db.kpis[0].id;
+      kpiSelect.value = state.filters.kpiId;
+
+      const periodInput = document.getElementById('filter-period');
+      periodInput.value = state.filters.period;
+    };
+
+    const renderSummary = () => {
+      const kpi = state.db.kpis.find((k) => k.id === state.filters.kpiId);
+      if (!kpi) return;
+      const months = monthRange(state.filters.period);
+      const summary = { 1: 0, 2: 0, 3: 0, 4: 0, null: 0 };
+      for (const brand of state.db.brands) {
+        if (state.filters.brandId !== 'all' && state.filters.brandId !== brand.id) continue;
+        for (const period of months) {
+          const target = getTargetsFor(kpi.id, period);
+          const value = getActualValue(kpi.id, brand.id, period);
+          const level = getLevel(kpi, target, value);
+          if (!level) {
+            summary.null += 1;
+          } else {
+            summary[level] += 1;
+          }
+        }
+      }
+      const container = document.getElementById('summary-cards');
+      container.innerHTML = '';
+      [4,3,2,1].forEach((level) => {
+        const card = document.createElement('div');
+        card.className = 'border border-slate-200 rounded-lg p-4 flex flex-col gap-2';
+        card.innerHTML = `
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-semibold">${TEXTS[state.lang].level} ${level}</span>
+            <span class="w-8 h-8 rounded heat-level-${level}"></span>
+          </div>
+          <div class="text-2xl font-bold">${summary[level]}</div>
+          <div class="text-xs text-slate-500">${TEXTS[state.lang].totals}</div>
+        `;
+        container.appendChild(card);
+      });
+      const noColor = document.createElement('div');
+      noColor.className = 'border border-dashed border-slate-300 rounded-lg p-4 flex flex-col gap-2';
+      noColor.innerHTML = `
+        <div class="text-sm font-semibold">${TEXTS[state.lang].noColor}</div>
+        <div class="text-2xl font-bold">${summary.null}</div>
+        <div class="text-xs text-slate-500">${TEXTS[state.lang].totals}</div>
+      `;
+      container.appendChild(noColor);
+    };
+
+    const renderHeatmap = () => {
+      const table = document.getElementById('heatmap-table');
+      table.innerHTML = '';
+      const kpi = state.db.kpis.find((k) => k.id === state.filters.kpiId);
+      if (!kpi) return;
+      const months = monthRange(state.filters.period);
+      const thead = document.createElement('thead');
+      const headerRow = document.createElement('tr');
+      headerRow.innerHTML = `<th class="sticky top-0 bg-white border border-slate-200 px-3 py-2">${TEXTS[state.lang].brand}</th>` +
+        months.map((m) => `<th class="border border-slate-200 px-3 py-2 whitespace-nowrap">${m}</th>`).join('');
+      thead.appendChild(headerRow);
+      table.appendChild(thead);
+
+      const tbody = document.createElement('tbody');
+      for (const brand of state.db.brands) {
+        if (state.filters.brandId !== 'all' && state.filters.brandId !== brand.id) continue;
+        const row = document.createElement('tr');
+        row.innerHTML = `<th class="border border-slate-200 px-3 py-2 bg-slate-50 text-start">${brand.name}</th>`;
+        months.forEach((period) => {
+          const target = getTargetsFor(kpi.id, period);
+          const value = getActualValue(kpi.id, brand.id, period);
+          const level = getLevel(kpi, target, value);
+          const cell = document.createElement('td');
+          cell.className = 'border border-slate-200 px-3 py-2 cursor-pointer align-middle text-center';
+          if (level) {
+            cell.classList.add(`heat-level-${level}`);
+          }
+          cell.dataset.brandId = brand.id;
+          cell.dataset.periodKey = period;
+          cell.textContent = value !== null && value !== undefined ? formatValue(kpi, value) : '-';
+          const matchingActuals = state.db.actuals.filter((a) =>
+            a.kpiId === kpi.id &&
+            a.brandId === brand.id &&
+            a.period_key === period
+          );
+          let existingActual = null;
+          if (state.filters.cityId && state.filters.cityId !== 'all') {
+            existingActual = matchingActuals.find((a) => (a.cityId || '') === state.filters.cityId);
+          }
+          if (!existingActual) {
+            existingActual = matchingActuals.find((a) => !a.cityId);
+          }
+          if (!existingActual) {
+            existingActual = matchingActuals[0] || null;
+          }
+          cell.addEventListener('click', () => openQuickEdit({
+            brandId: brand.id,
+            period_key: period,
+            value,
+            id: existingActual ? existingActual.id : null,
+            cityId: existingActual ? existingActual.cityId : (state.filters.cityId !== 'all' ? state.filters.cityId : null),
+            source: existingActual ? existingActual.source : 'Manual'
+          }));
+          row.appendChild(cell);
+        });
+        tbody.appendChild(row);
+      }
+      table.appendChild(tbody);
+
+      const subtitle = document.getElementById('heatmap-subtitle');
+      subtitle.textContent = kpi.direction === 'HIGH' ? TEXTS[state.lang].directionHigh : TEXTS[state.lang].directionLow;
+
+      renderSummary();
+    };
+
+    const bindControls = () => {
+      $('#lang-toggle').addEventListener('click', () => {
+        state.lang = state.lang === 'ar' ? 'en' : 'ar';
+        localStorage.setItem('kpi-lite-lang', state.lang);
+        renderApp();
+      });
+
+      $('#filter-brand').addEventListener('change', (event) => {
+        state.filters.brandId = event.target.value;
+        renderHeatmap();
+      });
+
+      $('#filter-city').addEventListener('change', (event) => {
+        state.filters.cityId = event.target.value;
+        renderHeatmap();
+      });
+
+      $('#filter-kpi').addEventListener('change', (event) => {
+        state.filters.kpiId = event.target.value;
+        renderHeatmap();
+      });
+
+      $('#filter-period').addEventListener('change', (event) => {
+        state.filters.period = event.target.value || state.filters.period;
+        renderHeatmap();
+      });
+
+      $('#filter-percent').addEventListener('change', (event) => {
+        state.displayPercentMode = event.target.value;
+        renderHeatmap();
+      });
+
+      $('#quick-entry-btn').addEventListener('click', () => openQuickEdit());
+
+      $('#export-btn').addEventListener('click', handleExport);
+      $('#reset-btn').addEventListener('click', () => {
+        if (confirm(TEXTS[state.lang].resetConfirm)) {
+          state.db = dataAdapter.reset();
+          renderApp();
+        }
+      });
+
+      const importLabel = $('[data-i18n="importCsv"]').parentElement;
+      const importInput = $('#csv-import');
+      importLabel.addEventListener('click', () => importInput.click());
+      importInput.addEventListener('change', handleImport);
+    };
+
+    const openQuickEdit = (defaults = {}) => {
+      const template = document.getElementById('quick-edit-template');
+      const clone = template.content.cloneNode(true);
+      document.body.appendChild(clone);
+      const modal = document.body.lastElementChild;
+      applyTranslations();
+
+      const form = modal.querySelector('[data-role="form"]');
+      const brandSelect = form.querySelector('select[name="brandId"]');
+      brandSelect.innerHTML = state.db.brands.map((brand) => `<option value="${brand.id}">${brand.name}</option>`).join('');
+      brandSelect.value = defaults.brandId || (state.filters.brandId !== 'all' ? state.filters.brandId : state.db.brands[0].id);
+
+      const citySelect = form.querySelector('select[name="cityId"]');
+      citySelect.innerHTML = `<option value="">${TEXTS[state.lang].noCity}</option>` +
+        state.db.cities.map((city) => `<option value="${city.id}">${city.name}</option>`).join('');
+      citySelect.value = defaults.cityId || (state.filters.cityId !== 'all' ? state.filters.cityId : '');
+
+      const periodInput = form.querySelector('input[name="period_key"]');
+      periodInput.value = defaults.period_key || state.filters.period;
+
+      const valueInput = form.querySelector('input[name="value"]');
+      if (defaults.value !== undefined && defaults.value !== null) {
+        const kpi = state.db.kpis.find((k) => k.id === state.filters.kpiId);
+        valueInput.value = formatValue(kpi, defaults.value);
+      }
+
+      const closeButtons = modal.querySelectorAll('[data-role="close"]');
+      closeButtons.forEach((btn) => btn.addEventListener('click', () => modal.remove()));
+
+      form.addEventListener('submit', (event) => {
+        event.preventDefault();
+        const formData = new FormData(form);
+        const kpiId = state.filters.kpiId;
+        const kpi = state.db.kpis.find((k) => k.id === kpiId);
+        const actualValue = parseInputValue(kpi, formData.get('value'));
+        if (actualValue === null) return;
+        const actual = {
+          id: defaults.id,
+          kpiId,
+          brandId: formData.get('brandId'),
+          cityId: formData.get('cityId') || null,
+          period_key: formData.get('period_key'),
+          value: actualValue,
+          source: defaults.source || 'Manual'
+        };
+        dataAdapter.upsertActual(state.db, actual);
+        modal.remove();
+        renderHeatmap();
+      });
+    };
+
+    const handleExport = () => {
+      const rows = [['kpi_code', 'brand_code', 'period_key', 'value', 'direction', 'unit_type']];
+      const filteredActuals = state.db.actuals.filter((a) => {
+        if (state.filters.kpiId && a.kpiId !== state.filters.kpiId) return false;
+        if (state.filters.brandId !== 'all' && a.brandId !== state.filters.brandId) return false;
+        if (state.filters.cityId !== 'all' && (a.cityId || '') !== state.filters.cityId) return false;
+        return true;
+      });
+      filteredActuals.forEach((actual) => {
+        const kpi = state.db.kpis.find((k) => k.id === actual.kpiId);
+        const brand = state.db.brands.find((b) => b.id === actual.brandId);
+        rows.push([
+          kpi.code,
+          brand.code,
+          actual.period_key,
+          actual.value,
+          kpi.direction,
+          kpi.unit_type
+        ]);
+      });
+      const csvContent = rows.map((row) => row.join(',')).join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'kpi-actuals.csv';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    };
+
+    const handleImport = (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result;
+        const lines = text.trim().split(/\r?\n/);
+        const headers = lines.shift().split(',').map((h) => h.trim());
+        const idx = (key) => headers.indexOf(key);
+        const required = ['kpi_code', 'brand_code', 'period_key', 'value'];
+        if (required.some((key) => idx(key) === -1)) {
+          console.warn('CSV missing required headers');
+          return;
+        }
+        lines.forEach((line) => {
+          if (!line.trim()) return;
+          const cols = line.split(',');
+          const kpiCode = cols[idx('kpi_code')];
+          const brandCode = cols[idx('brand_code')];
+          const periodKey = cols[idx('period_key')];
+          const value = parseFloat(cols[idx('value')]);
+          const kpi = state.db.kpis.find((k) => k.code === kpiCode);
+          const brand = state.db.brands.find((b) => b.code === brandCode);
+          if (!kpi || !brand || Number.isNaN(value)) return;
+          const actual = {
+            kpiId: kpi.id,
+            brandId: brand.id,
+            cityId: null,
+            period_key: periodKey,
+            value,
+            source: 'CSV'
+          };
+          dataAdapter.upsertActual(state.db, actual);
+        });
+        renderHeatmap();
+        event.target.value = '';
+      };
+      reader.readAsText(file);
+    };
+
+    const init = () => {
+      state.db = dataAdapter.loadDB();
+      const savedLang = localStorage.getItem('kpi-lite-lang');
+      if (savedLang) state.lang = savedLang;
+      renderApp();
+    };
+
+    document.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
