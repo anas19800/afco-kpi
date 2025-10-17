@@ -1,61 +1,24 @@
-# AFCO KPI
+# AFCO KPI Dashboard (Static Edition)
 
-لوحة مؤشرات مبنية على **Next.js 14** مع بيانات تجريبية ثابتة وخريطة حرارة للعلامات التجارية. لا حاجة لقاعدة بيانات بعد الآن؛ يتم تحميل كل شيء من ملف `lib/sampleData.ts` ليعمل التطبيق بسلاسة سواء محليًا أو عند نشره على GitHub Pages.
+This repository now ships a single static dashboard that can be hosted directly from GitHub Pages.
+The page renders a curated set of KPIs and a city heatmap without requiring any build tooling or databases.
 
-## المتطلبات الأساسية
+## Quick start
 
-- Node.js 18 أو أحدث
-- مدير الحزم [pnpm](https://pnpm.io/)
+1. Open [`index.html`](./index.html) directly in your browser to preview the dashboard locally.
+2. To publish the page on GitHub Pages, push the file to your `main` branch and enable Pages from the repository settings.
 
-## خطوات التشغيل محليًا
+## Customising the data
 
-1. تثبيت الاعتمادات (التبعيات موجودة مسبقًا في المستودع، لكن هذا الأمر يضمن تزامنها):
-   ```bash
-   pnpm install
-   ```
-2. تشغيل خادم التطوير:
-   ```bash
-   pnpm dev
-   ```
-3. افتح المتصفح على `http://localhost:3000/afco-kpi/` لمعاينة لوحة التحكم أثناء التطوير.
+All figures are defined in the `sample` object inside `index.html`.
+Update the KPI thresholds, values, and city metrics, then refresh the page to see the changes instantly.
 
-> **ملاحظة:** يستخدم التطبيق المسار الأساسي `/afco-kpi` افتراضيًا ليتوافق مع GitHub Pages. إذا أردت العمل على الجذر `/` فيمكنك تشغيل الخادم بالمتغير `NEXT_PUBLIC_BASE_PATH=` (قيمة فارغة).
+## Design notes
 
-## النشر على GitHub Pages
+- Responsive layout with cards for high-level KPIs and a scrollable heatmap table for detailed city performance.
+- Visual status badges (On Track, Watch, At Risk) adapt automatically based on the KPI band thresholds.
+- Date stamps update dynamically in the browser to show when the snapshot was generated.
 
-1. اضبط متغير البيئة قبل عملية البناء (يمكن إضافته في إعدادات Actions أو تشغيله يدويًا):
-   ```bash
-   export NEXT_PUBLIC_BASE_PATH=/afco-kpi
-   ```
-2. نفّذ البناء الذي ينتج موقعًا ثابتًا في مجلد `out/`:
-   ```bash
-   pnpm build
-   ```
-3. ارفع محتويات مجلد `out/` إلى فرع GitHub Pages (عادةً `gh-pages`) أو فعّل GitHub Action يقوم بنسخه تلقائيًا. بعد ذلك يصبح التطبيق متاحًا على `https://anas19800.github.io/afco-kpi/`.
+## License
 
-## فحوصات الجودة
-
-- `pnpm test` لتشغيل اختبارات Vitest الخاصة بوحدات التنسيق وتلوين الخلايا.
-- `pnpm lint` لتشغيل ESLint (إن وُجد ضمن الإعدادات المحلية).
-- `pnpm build` للتأكد من نجاح بناء الموقع الثابت قبل النشر.
-
-## نظرة على هيكل المشروع
-
-- `app/(dashboard)/page.tsx`: يجمع البيانات من `sampleData`، يحسب البطاقات الملخصة، ويمرر القيم إلى مكون خريطة الحرارة.
-- `components/KpiHeatmap.tsx`: يعرض جدول الأداء بالاعتماد على دالة ‎`colorClass`‎ لتلوين الخلايا حسب الاتجاه والعتبات.
-- `components/KpiCard.tsx`: بطاقة مبسطة لعرض القيم السريعة مع خيار تلوين خلفية البطاقة.
-- `lib/sampleData.ts`: مصدر البيانات الثابتة للعلامات، العتبات، وتعريف KPI.
-- `lib/kpiColoring.ts`: منطق تعيين الألوان بناءً على اتجاه KPI ومستويات الأداء.
-- `lib/units.ts`: دوال تنسيق القيم بحسب نوع الوحدة (نسبة، عملة سعودية، أرقام، نص).
-
-## روابط مفيدة
-
-- [الصفحة الرئيسية للتطبيق](https://github.com/anas19800/afco-kpi/blob/main/app/%28dashboard%29/page.tsx)
-- [مكون بطاقة KPI](https://github.com/anas19800/afco-kpi/blob/main/components/KpiCard.tsx)
-- [مكون خريطة الحرارة](https://github.com/anas19800/afco-kpi/blob/main/components/KpiHeatmap.tsx)
-
-## استكشاف الأخطاء وإصلاحها
-
-- تأكد من ضبط `NEXT_PUBLIC_BASE_PATH` عند البناء للنشر على GitHub Pages حتى تعمل المسارات بشكل صحيح.
-- إذا لم تظهر البيانات، فتحقق من أن `lib/sampleData.ts` ما زال يحتوي على القيم المطلوبة ولم يتم تعديلها إلى قيم فارغة.
-- في حال لم تُعرض الألوان كما هو متوقع، استخدم الاختبارات في ‎`lib/__tests__/kpiColoring.test.ts`‎ للتأكد من العتبات، أو عدّل قيم ‎`bands`‎ في ملف البيانات الثابتة.
+Released under the MIT license.
