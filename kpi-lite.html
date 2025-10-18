@@ -127,7 +127,7 @@
           <p id="targetBandHelper" class="text-xs text-slate-500"></p>
           <label class="flex flex-col text-sm gap-1">
             <span data-i18n="selectPeriod"></span>
-            <input type="month" id="kpiBandPeriod" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            <select id="kpiBandPeriod" class="border border-slate-300 rounded-lg px-2 py-1"></select>
           </label>
           <div class="grid gap-4 sm:grid-cols-2">
             <label class="flex flex-col text-sm gap-1">
@@ -249,6 +249,8 @@
   </dialog>
 
   <script>
+    const DEFAULT_TARGET_PERIOD = "__default__";
+
     const STRINGS = {
       en: {
         title: "KPI Lite Dashboard",
@@ -277,6 +279,7 @@
         createKpi: "Create KPI",
         kpiThresholds: "Target bands",
         selectPeriod: "Select period",
+        allPeriodsOption: "All months",
         level4Label: "Level 4",
         level3Label: "Level 3",
         level2Label: "Level 2",
@@ -334,6 +337,7 @@
         createKpi: "إنشاء المؤشر",
         kpiThresholds: "نطاقات التلوين",
         selectPeriod: "اختر الفترة",
+        allPeriodsOption: "كل الأشهر",
         level4Label: "المستوى 4",
         level3Label: "المستوى 3",
         level2Label: "المستوى 2",
@@ -492,24 +496,21 @@
       const targetBands = [];
       const months = Array.from({ length: 12 }, (_, idx) => `2025-${String(idx + 1).padStart(2, "0")}`);
       kpis.forEach((kpi) => {
-        months.forEach((period, idx) => {
-          const base = kpi.direction === "LOW" ? 40 : 60;
-          const variance = idx % 3;
-          const scale = kpi.percentMode === "0_1" ? 0.01 : 1;
-          const l4 = (base + variance * 5) * scale;
-          const l3 = l4 - (kpi.direction === "LOW" ? -5 : 5) * scale;
-          const l2 = l3 - (kpi.direction === "LOW" ? -7 : 7) * scale;
-          const l1 = l2 - (kpi.direction === "LOW" ? -10 : 10) * scale;
-          targetBands.push({
-            id: `${kpi.id}_${period}`,
-            kpiId: kpi.id,
-            period_type: "Monthly",
-            period_key: period,
-            level4: Number(l4.toFixed(4)),
-            level3: Number(l3.toFixed(4)),
-            level2: Number(l2.toFixed(4)),
-            level1: Number(l1.toFixed(4))
-          });
+        const base = kpi.direction === "LOW" ? 40 : 60;
+        const scale = kpi.percentMode === "0_1" ? 0.01 : 1;
+        const l4 = base * scale;
+        const l3 = l4 - (kpi.direction === "LOW" ? -5 : 5) * scale;
+        const l2 = l3 - (kpi.direction === "LOW" ? -7 : 7) * scale;
+        const l1 = l2 - (kpi.direction === "LOW" ? -10 : 10) * scale;
+        targetBands.push({
+          id: `${kpi.id}_${DEFAULT_TARGET_PERIOD}`,
+          kpiId: kpi.id,
+          period_type: "Monthly",
+          period_key: DEFAULT_TARGET_PERIOD,
+          level4: Number(l4.toFixed(4)),
+          level3: Number(l3.toFixed(4)),
+          level2: Number(l2.toFixed(4)),
+          level1: Number(l1.toFixed(4))
         });
       });
 
@@ -815,7 +816,7 @@
     function getFilteredPeriods(kpiId) {
       const periodSet = new Set();
       state.db.targetBands.forEach((band) => {
-        if (band.kpiId === kpiId) {
+        if (band.kpiId === kpiId && band.period_key !== DEFAULT_TARGET_PERIOD) {
           periodSet.add(band.period_key);
         }
       });
@@ -839,7 +840,13 @@
     }
 
     function findTargetBand(kpiId, period) {
-      return state.db.targetBands.find((band) => band.kpiId === kpiId && band.period_key === period);
+      const direct = state.db.targetBands.find(
+        (band) => band.kpiId === kpiId && band.period_key === period
+      );
+      if (direct) return direct;
+      return state.db.targetBands.find(
+        (band) => band.kpiId === kpiId && band.period_key === DEFAULT_TARGET_PERIOD
+      ) || null;
     }
 
     function findActual(kpiId, brandId, period, cityId) {
@@ -907,8 +914,14 @@
           ? null
           : state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
       const periods = selectedKpi ? getFilteredPeriods(selectedKpi.id) : [];
+      if (!state.manager.selectedPeriod) {
+        state.manager.selectedPeriod = DEFAULT_TARGET_PERIOD;
+      }
       if (state.filters.period) {
         state.manager.selectedPeriod = state.filters.period;
+      }
+      if (state.manager.selectedPeriod === DEFAULT_TARGET_PERIOD) {
+        return;
       }
       if (state.manager.selectedPeriod && state.manager.selectedPeriod.length === 7) {
         return;
@@ -963,7 +976,44 @@
       if (percentModeSelect) percentModeSelect.value = selectedKpi ? selectedKpi.percentMode : "0_100";
 
       if (periodInput) {
-        periodInput.value = state.manager.selectedPeriod || "";
+        const monthSet = new Set();
+        const referenceSources = [
+          state.filters.period,
+          state.manager.selectedPeriod !== DEFAULT_TARGET_PERIOD ? state.manager.selectedPeriod : "",
+          selectedKpi
+            ? state.db.actuals.find((item) => item.kpiId === selectedKpi.id)?.period_key
+            : state.db.actuals[0]?.period_key
+        ].filter(Boolean);
+        const referencePeriod = referenceSources.find((value) => value && value.length === 7) || "";
+        if (referencePeriod) {
+          const [year] = referencePeriod.split("-");
+          Array.from({ length: 12 }, (_, idx) => `${year}-${String(idx + 1).padStart(2, "0")}`).forEach((period) =>
+            monthSet.add(period)
+          );
+        }
+        getFilteredPeriods(selectedKpi?.id || "").forEach((period) => monthSet.add(period));
+        if (monthSet.size === 0) {
+          const today = new Date();
+          const year = today.getFullYear();
+          Array.from({ length: 12 }, (_, idx) => `${year}-${String(idx + 1).padStart(2, "0")}`).forEach((period) =>
+            monthSet.add(period)
+          );
+        }
+        const months = Array.from(monthSet).filter((period) => period && period.length === 7).sort();
+        const selectedPeriod = state.manager.selectedPeriod || DEFAULT_TARGET_PERIOD;
+        const options = [`<option value="${DEFAULT_TARGET_PERIOD}">${t("allPeriodsOption")}</option>`];
+        months.forEach((month) => {
+          options.push(`<option value="${month}">${month}</option>`);
+        });
+        if (
+          selectedPeriod &&
+          selectedPeriod !== DEFAULT_TARGET_PERIOD &&
+          !months.includes(selectedPeriod)
+        ) {
+          options.push(`<option value="${selectedPeriod}">${selectedPeriod}</option>`);
+        }
+        periodInput.innerHTML = options.join("");
+        periodInput.value = selectedPeriod;
         periodInput.disabled = isNew;
       }
 
@@ -1025,7 +1075,11 @@
         return;
       }
 
-      const referencePeriod = state.filters.period || state.manager.selectedPeriod || getDefaultPeriodForKpis(kpis);
+      const referencePeriodRaw =
+        state.filters.period ||
+        (state.manager.selectedPeriod !== DEFAULT_TARGET_PERIOD ? state.manager.selectedPeriod : "") ||
+        getDefaultPeriodForKpis(kpis);
+      const referencePeriod = referencePeriodRaw && referencePeriodRaw.length === 7 ? referencePeriodRaw : "";
       let months = [];
       if (state.filters.period) {
         months = [state.filters.period];
@@ -1349,21 +1403,46 @@
           const period = document.getElementById("kpiBandPeriod").value;
           if (!selectedKpi || !period) return;
           state.manager.selectedPeriod = period;
-          const existing = findTargetBand(selectedKpi.id, period);
+          const directExisting = state.db.targetBands.find(
+            (item) => item.kpiId === selectedKpi.id && item.period_key === period
+          );
+          const defaultExisting = state.db.targetBands.find(
+            (item) => item.kpiId === selectedKpi.id && item.period_key === DEFAULT_TARGET_PERIOD
+          );
           const converted = convertTargetBandFromUi(selectedKpi, {
             level4: document.getElementById("bandLevel4").value,
             level3: document.getElementById("bandLevel3").value,
             level2: document.getElementById("bandLevel2").value,
             level1: document.getElementById("bandLevel1").value
           });
-          const payload = {
-            id: existing?.id || null,
-            kpiId: selectedKpi.id,
-            period_type: existing?.period_type || "Monthly",
-            period_key: period,
-            ...converted
-          };
-          DataAdapter.upsertTargetBand(state.db, payload);
+          if (period === DEFAULT_TARGET_PERIOD) {
+            const payload = {
+              id: defaultExisting?.id || null,
+              kpiId: selectedKpi.id,
+              period_type: defaultExisting?.period_type || "Monthly",
+              period_key: DEFAULT_TARGET_PERIOD,
+              ...converted
+            };
+            DataAdapter.upsertTargetBand(state.db, payload);
+          } else {
+            const payload = {
+              id: directExisting?.id || null,
+              kpiId: selectedKpi.id,
+              period_type: directExisting?.period_type || "Monthly",
+              period_key: period,
+              ...converted
+            };
+            DataAdapter.upsertTargetBand(state.db, payload);
+            if (!defaultExisting) {
+              DataAdapter.upsertTargetBand(state.db, {
+                id: null,
+                kpiId: selectedKpi.id,
+                period_type: "Monthly",
+                period_key: DEFAULT_TARGET_PERIOD,
+                ...converted
+              });
+            }
+          }
           renderKpiManager();
           renderHeatmap();
         });
