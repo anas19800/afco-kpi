@@ -65,6 +65,7 @@
     <section class="mt-6 bg-white shadow rounded-xl px-6 py-4" id="kpiManagerSection">
       <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <h2 class="text-lg font-semibold" data-i18n="manageKpis"></h2>
+        <button id="addKpiBtn" class="self-start px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm" data-i18n="addKpi"></button>
       </div>
       <div class="mt-4 grid gap-6 lg:grid-cols-2">
         <form id="kpiDetailForm" class="space-y-4">
@@ -116,13 +117,14 @@
             </label>
           </div>
           <div class="flex justify-end">
-            <button type="submit" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm" data-i18n="updateKpi"></button>
+            <button type="submit" id="kpiSubmitBtn" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm" data-i18n="updateKpi"></button>
           </div>
         </form>
         <form id="targetBandForm" class="space-y-4">
           <div class="flex items-center justify-between">
             <h3 class="text-base font-semibold" data-i18n="kpiThresholds"></h3>
           </div>
+          <p id="targetBandHelper" class="text-xs text-slate-500"></p>
           <label class="flex flex-col text-sm gap-1">
             <span data-i18n="selectPeriod"></span>
             <input type="month" id="kpiBandPeriod" class="border border-slate-300 rounded-lg px-2 py-1" required />
@@ -146,7 +148,7 @@
             </label>
           </div>
           <div class="flex justify-end">
-            <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm" data-i18n="updateTargets"></button>
+            <button type="submit" id="targetBandSubmit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm" data-i18n="updateTargets"></button>
           </div>
         </form>
       </div>
@@ -263,6 +265,7 @@
         period: "Period",
         quickEntry: "Quick entry",
         manageKpis: "Manage KPIs",
+        addKpi: "Add KPI",
         kpiDetails: "KPI details",
         kpiNameEn: "Name (English)",
         kpiNameAr: "Name (Arabic)",
@@ -270,6 +273,8 @@
         kpiUnitType: "Unit type",
         kpiDirection: "Direction",
         kpiPercentMode: "Percent storage",
+        newKpiOption: "➕ New KPI",
+        createKpi: "Create KPI",
         kpiThresholds: "Target bands",
         selectPeriod: "Select period",
         level4Label: "Level 4",
@@ -299,7 +304,8 @@
         quickEntryTitle: "Quick KPI update",
         directionHigh: "Higher is better",
         directionLow: "Lower is better",
-        noData: "No data to display"
+        noData: "No data to display",
+        saveKpiFirst: "Save the KPI before setting targets."
       },
       ar: {
         title: "لوحة مؤشرات KPI لايت",
@@ -316,6 +322,7 @@
         period: "الفترة",
         quickEntry: "إدخال سريع",
         manageKpis: "إدارة مؤشرات الأداء",
+        addKpi: "إضافة مؤشر",
         kpiDetails: "تفاصيل المؤشر",
         kpiNameEn: "الاسم (إنجليزي)",
         kpiNameAr: "الاسم (عربي)",
@@ -323,6 +330,8 @@
         kpiUnitType: "نوع الوحدة",
         kpiDirection: "الاتجاه",
         kpiPercentMode: "تخزين النسبة",
+        newKpiOption: "➕ مؤشر جديد",
+        createKpi: "إنشاء المؤشر",
         kpiThresholds: "نطاقات التلوين",
         selectPeriod: "اختر الفترة",
         level4Label: "المستوى 4",
@@ -352,7 +361,8 @@
         quickEntryTitle: "تحديث سريع للمؤشر",
         directionHigh: "الأعلى أفضل",
         directionLow: "الأقل أفضل",
-        noData: "لا توجد بيانات للعرض"
+        noData: "لا توجد بيانات للعرض",
+        saveKpiFirst: "يرجى حفظ المؤشر قبل تحديد الأهداف."
       }
     };
 
@@ -363,6 +373,7 @@
     };
 
     const STORAGE_KEY = "kpiLiteDB_v1";
+    const NEW_KPI_ID = "__new__";
 
     const DataAdapter = (() => {
       const load = () => {
@@ -409,6 +420,14 @@
         save(db);
       };
 
+      const createKpi = (db, kpi) => {
+        const id = kpi.id || crypto.randomUUID?.() || `k_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        const record = { ...kpi, id };
+        db.kpis.push(record);
+        save(db);
+        return record;
+      };
+
       const updateKpi = (db, updatedKpi) => {
         const index = db.kpis.findIndex((item) => item.id === updatedKpi.id);
         if (index >= 0) {
@@ -423,7 +442,7 @@
         return db;
       };
 
-      return { load, save, upsertActual, upsertTargetBand, updateKpi, reset };
+      return { load, save, upsertActual, upsertTargetBand, createKpi, updateKpi, reset };
     })();
 
     function seedDatabase() {
@@ -717,7 +736,11 @@
 
       const quickKpi = document.getElementById("quickKpi");
       quickKpi.innerHTML = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
-      const quickKpiValue = state.filters.kpiId !== "all" ? state.filters.kpiId : (state.manager.selectedKpiId || state.db.kpis[0]?.id);
+      const managerFallbackKpi =
+        state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+          ? state.manager.selectedKpiId
+          : state.db.kpis[0]?.id;
+      const quickKpiValue = state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi;
       if (quickKpiValue) {
         quickKpi.value = quickKpiValue;
       }
@@ -737,7 +760,7 @@
       const manualKpi = document.getElementById("manualKpi");
       if (manualKpi) {
         manualKpi.innerHTML = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
-        const manualKpiValue = state.filters.kpiId !== "all" ? state.filters.kpiId : (state.manager.selectedKpiId || state.db.kpis[0]?.id);
+        const manualKpiValue = state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi;
         if (manualKpiValue) {
           manualKpi.value = manualKpiValue;
         }
@@ -870,16 +893,20 @@
 
     function ensureManagerDefaults() {
       if (!state.db) return;
-      if (!state.manager.selectedKpiId && state.db.kpis.length > 0) {
-        state.manager.selectedKpiId = state.db.kpis[0].id;
+      if (!state.manager.selectedKpiId) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
       }
-      if (!state.manager.selectedKpiId) return;
-      const selectedKpi = state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
-      if (!selectedKpi) {
-        state.manager.selectedKpiId = state.db.kpis[0]?.id || null;
-        return;
+      if (
+        state.manager.selectedKpiId !== NEW_KPI_ID &&
+        !state.db.kpis.find((item) => item.id === state.manager.selectedKpiId)
+      ) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
       }
-      const periods = getFilteredPeriods(selectedKpi.id);
+      const selectedKpi =
+        state.manager.selectedKpiId === NEW_KPI_ID
+          ? null
+          : state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+      const periods = selectedKpi ? getFilteredPeriods(selectedKpi.id) : [];
       if (state.filters.period) {
         state.manager.selectedPeriod = state.filters.period;
       }
@@ -898,14 +925,23 @@
       ensureManagerDefaults();
       const select = document.getElementById("managerKpiSelect");
       if (!select) return;
-      select.innerHTML = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
-      if (state.manager.selectedKpiId && !state.db.kpis.find((kpi) => kpi.id === state.manager.selectedKpiId)) {
-        state.manager.selectedKpiId = state.db.kpis[0]?.id || null;
+      const options = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
+      select.innerHTML = `${options}<option value="${NEW_KPI_ID}">${t("newKpiOption")}</option>`;
+      if (
+        state.manager.selectedKpiId !== NEW_KPI_ID &&
+        !state.db.kpis.find((kpi) => kpi.id === state.manager.selectedKpiId)
+      ) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
       }
-      if (state.manager.selectedKpiId) {
-        select.value = state.manager.selectedKpiId;
+      if (!state.manager.selectedKpiId) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
       }
-      const selectedKpi = state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+      select.value = state.manager.selectedKpiId;
+      const selectedKpi =
+        state.manager.selectedKpiId === NEW_KPI_ID
+          ? null
+          : state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+      const isNew = !selectedKpi;
       const nameEnInput = document.getElementById("kpiNameEn");
       const nameArInput = document.getElementById("kpiNameAr");
       const codeInput = document.getElementById("kpiCode");
@@ -919,34 +955,42 @@
         level2: document.getElementById("bandLevel2"),
         level1: document.getElementById("bandLevel1")
       };
-      if (!selectedKpi) {
-        if (nameEnInput) nameEnInput.value = "";
-        if (nameArInput) nameArInput.value = "";
-        if (codeInput) codeInput.value = "";
-        if (periodInput) periodInput.value = state.manager.selectedPeriod || "";
-        Object.values(bandInputs).forEach((input) => {
-          if (input) input.value = "";
-        });
-        return;
-      }
-      if (nameEnInput) nameEnInput.value = selectedKpi.name_en;
-      if (nameArInput) nameArInput.value = selectedKpi.name_ar;
-      if (codeInput) codeInput.value = selectedKpi.code;
-      if (unitSelect) unitSelect.value = selectedKpi.unit_type;
-      if (directionSelect) directionSelect.value = selectedKpi.direction;
-      if (percentModeSelect) percentModeSelect.value = selectedKpi.percentMode;
+      if (nameEnInput) nameEnInput.value = selectedKpi ? selectedKpi.name_en : "";
+      if (nameArInput) nameArInput.value = selectedKpi ? selectedKpi.name_ar : "";
+      if (codeInput) codeInput.value = selectedKpi ? selectedKpi.code : "";
+      if (unitSelect) unitSelect.value = selectedKpi ? selectedKpi.unit_type : "%";
+      if (directionSelect) directionSelect.value = selectedKpi ? selectedKpi.direction : "HIGH";
+      if (percentModeSelect) percentModeSelect.value = selectedKpi ? selectedKpi.percentMode : "0_100";
 
-      if (state.manager.selectedPeriod && periodInput) {
-        periodInput.value = state.manager.selectedPeriod;
+      if (periodInput) {
+        periodInput.value = state.manager.selectedPeriod || "";
+        periodInput.disabled = isNew;
       }
 
-      const targetBand = state.manager.selectedPeriod ? findTargetBand(selectedKpi.id, state.manager.selectedPeriod) : null;
-      const uiBand = convertTargetBandForUi(selectedKpi, targetBand);
+      let uiBand = { level1: "", level2: "", level3: "", level4: "" };
+      if (!isNew && state.manager.selectedPeriod) {
+        const targetBand = findTargetBand(selectedKpi.id, state.manager.selectedPeriod);
+        uiBand = convertTargetBandForUi(selectedKpi, targetBand);
+      }
       Object.entries(bandInputs).forEach(([key, input]) => {
         if (!input) return;
         const value = uiBand[key];
         input.value = value !== "" ? value : "";
+        input.disabled = isNew;
       });
+      const targetHelper = document.getElementById("targetBandHelper");
+      if (targetHelper) {
+        targetHelper.textContent = isNew ? t("saveKpiFirst") : "";
+      }
+      const targetSubmit = document.getElementById("targetBandSubmit");
+      if (targetSubmit) {
+        targetSubmit.disabled = isNew;
+        targetSubmit.textContent = t("updateTargets");
+      }
+      const detailSubmit = document.getElementById("kpiSubmitBtn");
+      if (detailSubmit) {
+        detailSubmit.textContent = t(isNew ? "createKpi" : "updateKpi");
+      }
     }
 
     function renderManualEntry() {
@@ -1058,7 +1102,11 @@
       const effectiveCityId = cityId && cityId !== "all" ? cityId : (state.filters.cityId !== "all" ? state.filters.cityId : "");
       document.getElementById("quickBrand").value = effectiveBrandId;
       document.getElementById("quickCity").value = effectiveCityId;
-      const selectedKpiId = kpiId || (state.filters.kpiId !== "all" ? state.filters.kpiId : state.manager.selectedKpiId || state.db.kpis[0]?.id);
+      const managerFallbackKpi =
+        state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+          ? state.manager.selectedKpiId
+          : state.db.kpis[0]?.id;
+      const selectedKpiId = kpiId || (state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi);
       document.getElementById("quickKpi").value = selectedKpiId;
       if (period) {
         state.manager.selectedPeriod = period;
@@ -1176,7 +1224,11 @@
       document.getElementById("filterKpi").addEventListener("change", (event) => {
         state.filters.kpiId = event.target.value;
         const quickKpi = document.getElementById("quickKpi");
-        const effectiveKpi = state.filters.kpiId !== "all" ? state.filters.kpiId : (state.manager.selectedKpiId || state.db.kpis[0]?.id);
+        const managerFallbackKpi =
+          state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+            ? state.manager.selectedKpiId
+            : state.db.kpis[0]?.id;
+        const effectiveKpi = state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi;
         if (effectiveKpi) {
           quickKpi.value = effectiveKpi;
           const manualKpi = document.getElementById("manualKpi");
@@ -1203,19 +1255,32 @@
         openQuickDialog({
           brandId: state.filters.brandId,
           period: state.filters.period || "",
-          kpiId: state.filters.kpiId !== "all" ? state.filters.kpiId : (state.manager.selectedKpiId || state.db.kpis[0]?.id),
+          kpiId:
+            state.filters.kpiId !== "all"
+              ? state.filters.kpiId
+              : (state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+                  ? state.manager.selectedKpiId
+                  : state.db.kpis[0]?.id),
           cityId: state.filters.cityId
         });
       });
     }
 
     function setupKpiManager() {
+      const addButton = document.getElementById("addKpiBtn");
+      if (addButton) {
+        addButton.addEventListener("click", () => {
+          state.manager.selectedKpiId = NEW_KPI_ID;
+          renderKpiManager();
+        });
+      }
       const kpiSelect = document.getElementById("managerKpiSelect");
       if (kpiSelect) {
         kpiSelect.addEventListener("change", (event) => {
-          state.manager.selectedKpiId = event.target.value;
-          if (state.filters.kpiId !== "all") {
-            state.filters.kpiId = event.target.value;
+          const value = event.target.value;
+          state.manager.selectedKpiId = value;
+          if (value !== NEW_KPI_ID && state.filters.kpiId !== "all") {
+            state.filters.kpiId = value;
             const filterKpi = document.getElementById("filterKpi");
             if (filterKpi) {
               filterKpi.value = state.filters.kpiId;
@@ -1241,10 +1306,8 @@
       if (detailForm) {
         detailForm.addEventListener("submit", (event) => {
           event.preventDefault();
-          const selectedKpi = state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
-          if (!selectedKpi) return;
-          const payload = {
-            ...selectedKpi,
+          const existing = state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+          const formValues = {
             name_en: document.getElementById("kpiNameEn").value.trim(),
             name_ar: document.getElementById("kpiNameAr").value.trim(),
             code: document.getElementById("kpiCode").value.trim(),
@@ -1252,7 +1315,25 @@
             direction: document.getElementById("kpiDirection").value,
             percentMode: document.getElementById("kpiPercentMode").value
           };
-          DataAdapter.updateKpi(state.db, payload);
+          if (!existing) {
+            const created = DataAdapter.createKpi(state.db, formValues);
+            state.manager.selectedKpiId = created.id;
+            state.filters.kpiId = created.id;
+            const filterKpi = document.getElementById("filterKpi");
+            if (filterKpi) {
+              filterKpi.value = created.id;
+            }
+            const quickKpi = document.getElementById("quickKpi");
+            if (quickKpi) {
+              quickKpi.value = created.id;
+            }
+            const manualKpi = document.getElementById("manualKpi");
+            if (manualKpi) {
+              manualKpi.value = created.id;
+            }
+          } else {
+            DataAdapter.updateKpi(state.db, { ...existing, ...formValues });
+          }
           renderFilters();
           renderKpiManager();
           renderManualEntry();
