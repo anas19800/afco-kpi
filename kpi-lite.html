@@ -154,6 +154,23 @@
       </div>
     </section>
 
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4" id="insightsSection">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold" data-i18n="insightsTitle"></h2>
+          <p class="text-sm text-slate-500" data-i18n="insightsSubtitle"></p>
+        </div>
+        <a
+          href="https://bscdesigner.com/ar/performance-measurement.htm"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100"
+          data-i18n="insightsLink"
+        ></a>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2" id="insightsGrid"></div>
+    </section>
+
     <section class="mt-6 bg-white shadow rounded-xl px-6 py-4" id="manualEntrySection">
       <h2 class="text-lg font-semibold" data-i18n="manualEntryTitle"></h2>
       <p class="text-sm text-slate-500 mt-1" data-i18n="manualEntryHelp"></p>
@@ -288,6 +305,9 @@
         updateTargets: "Update targets",
         manualEntryTitle: "Manual data entry",
         manualEntryHelp: "Add or update actual values directly.",
+        insightsTitle: "Performance measurement ideas",
+        insightsSubtitle: "Highlights inspired by BSC Designer's guide to structured KPI programs.",
+        insightsLink: "Read the full guide",
         source: "Source",
         manualSave: "Save entry",
         legend: "Color legend",
@@ -346,6 +366,9 @@
         updateTargets: "تحديث الأهداف",
         manualEntryTitle: "إدخال البيانات يدويًا",
         manualEntryHelp: "أضف أو عدّل القيم الفعلية مباشرة.",
+        insightsTitle: "أفكار لقياس الأداء",
+        insightsSubtitle: "ملخص مستوحى من دليل BSC Designer لبناء برامج مؤشرات متوازنة.",
+        insightsLink: "اقرأ الدليل الكامل",
         source: "المصدر",
         manualSave: "حفظ الإدخال",
         legend: "دليل الألوان",
@@ -368,6 +391,53 @@
         noData: "لا توجد بيانات للعرض",
         saveKpiFirst: "يرجى حفظ المؤشر قبل تحديد الأهداف."
       }
+    };
+
+    const PERFORMANCE_INSIGHTS = {
+      en: [
+        {
+          title: "Anchor KPIs to strategic objectives",
+          description:
+            "Trace every metric to a clear strategic outcome so teams see why the KPI matters and how it supports the Balanced Scorecard perspective."
+        },
+        {
+          title: "Define thresholds that reflect value",
+          description:
+            "Pair each KPI with meaningful target bands, noting when a higher or lower result is desirable and how the four color levels communicate urgency."
+        },
+        {
+          title: "Blend leading and lagging indicators",
+          description:
+            "Combine predictive measures (training hours, pipeline health) with results metrics (revenue, satisfaction) to provide both early warnings and outcome tracking."
+        },
+        {
+          title: "Schedule reviews and improvement actions",
+          description:
+            "Use the dashboard during monthly performance dialogues, capture insights, and turn gaps into concrete initiatives with owners and deadlines."
+        }
+      ],
+      ar: [
+        {
+          title: "اربط المؤشرات بالأهداف الإستراتيجية",
+          description:
+            "ارسم مسار كل مؤشر نحو نتيجة استراتيجية واضحة حتى يفهم الفريق أهمية المقياس وكيف يدعم منظار بطاقة الأداء المتوازن."
+        },
+        {
+          title: "حدد نطاقات تعكس القيمة الحقيقية",
+          description:
+            "صمّم نطاقات الأهداف لكل مؤشر مع تحديد ما إذا كانت القيمة الأعلى أو الأقل هي الأفضل وكيف تنقل مستويات الألوان الأربعة درجة الإلحاح."
+        },
+        {
+          title: "وازن بين مؤشرات قيادية ومتأخرة",
+          description:
+            "ادمج المقاييس التنبؤية مثل ساعات التدريب وصحة خط المبيعات مع مقاييس النتائج كالإيرادات والرضا لتأمين إنذارات مبكرة ومتابعة للنتائج."
+        },
+        {
+          title: "جدول مراجعات وخطط تحسين مستمرة",
+          description:
+            "استخدم لوحة القيادة في اجتماعات الأداء الشهرية، وثّق الاستنتاجات وحوّل الفجوات إلى مبادرات محددة بمالكين وجداول زمنية."
+        }
+      ]
     };
 
     const REGION_LABELS = {
@@ -790,6 +860,22 @@
         </div>
       `);
       container.innerHTML = items.join("");
+    }
+
+    function renderInsights() {
+      const grid = document.getElementById("insightsGrid");
+      if (!grid) return;
+      const items = PERFORMANCE_INSIGHTS[state.lang] || [];
+      grid.innerHTML = items
+        .map(
+          (item) => `
+            <article class="h-full p-5 border border-slate-200 rounded-xl bg-slate-50/60 flex flex-col gap-2">
+              <h3 class="text-base font-semibold text-slate-800">${item.title}</h3>
+              <p class="text-sm text-slate-600 leading-relaxed">${item.description}</p>
+            </article>
+          `
+        )
+        .join("");
     }
 
     function summarizeLevels(cells) {
@@ -1577,6 +1663,7 @@
       renderKpiManager();
       renderManualEntry();
       renderLegend();
+      renderInsights();
       renderHeatmap();
     }
 
