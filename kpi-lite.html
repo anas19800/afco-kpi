@@ -1,0 +1,1924 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KPI Lite Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root { color-scheme: light; }
+    dialog::backdrop { background: rgba(15, 23, 42, 0.55); }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-900">
+  <div id="app" class="min-h-screen px-4 py-6 mx-auto max-w-7xl">
+    <header class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between bg-white shadow rounded-xl px-6 py-4">
+      <div>
+        <h1 class="text-2xl font-semibold" data-i18n="title">KPI Lite Dashboard</h1>
+        <p class="text-sm text-slate-500" data-i18n="subtitle">Rapid KPI monitoring prototype with offline storage.</p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <button id="langToggle" class="px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-sm"></button>
+        <label class="px-3 py-2 rounded-lg border border-slate-300 bg-slate-50 text-sm cursor-pointer hover:bg-slate-100 flex items-center gap-2">
+          <span data-i18n="percentMode"></span>
+          <select id="percentToggle" class="bg-transparent focus:outline-none">
+            <option value="0_100">0-100%</option>
+            <option value="0_1">0-1</option>
+          </select>
+        </label>
+        <button id="importCsv" class="px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm" data-i18n="importCsv"></button>
+        <input type="file" id="csvInput" accept=".csv" class="hidden" />
+        <button id="exportCsv" class="px-3 py-2 rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-sm" data-i18n="exportCsv"></button>
+        <button id="resetData" class="px-3 py-2 rounded-lg border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 text-sm" data-i18n="reset"></button>
+      </div>
+    </header>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4">
+      <h2 class="text-lg font-semibold mb-4" data-i18n="filters"></h2>
+      <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" id="filters">
+        <label class="flex flex-col gap-1 text-sm">
+          <span data-i18n="brand"></span>
+          <select id="filterBrand" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span data-i18n="city"></span>
+          <select id="filterCity" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span data-i18n="kpi"></span>
+          <select id="filterKpi" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span data-i18n="period"></span>
+          <input type="month" id="filterPeriod" class="border border-slate-300 rounded-lg px-2 py-1" />
+        </label>
+        <label class="flex flex-col gap-1 text-sm">
+          <span data-i18n="region"></span>
+          <select id="filterRegion" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+        </label>
+        <div class="flex items-end">
+          <button id="quickEntryBtn" class="w-full px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm" data-i18n="quickEntry"></button>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4" id="brandManagerSection">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div class="space-y-1">
+          <h2 class="text-lg font-semibold" data-i18n="manageBrands"></h2>
+          <p class="text-sm text-slate-500" data-i18n="brandManagerHint"></p>
+        </div>
+        <button
+          id="addBrandBtn"
+          class="self-start px-3 py-2 rounded-lg border border-sky-200 bg-sky-50 hover:bg-sky-100 text-sky-700 text-sm"
+          data-i18n="addBrand"
+        ></button>
+      </div>
+      <form id="brandDetailForm" class="mt-4 space-y-4">
+        <label class="flex flex-col text-sm gap-1">
+          <span data-i18n="brand"></span>
+          <select id="managerBrandSelect" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+        </label>
+        <div class="grid gap-4 md:grid-cols-2">
+          <label class="flex flex-col text-sm gap-1">
+            <span data-i18n="brandNameEn"></span>
+            <input id="brandNameEn" type="text" class="border border-slate-300 rounded-lg px-2 py-1" required />
+          </label>
+          <label class="flex flex-col text-sm gap-1">
+            <span data-i18n="brandNameAr"></span>
+            <input id="brandNameAr" type="text" class="border border-slate-300 rounded-lg px-2 py-1" required />
+          </label>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          <label class="flex flex-col text-sm gap-1">
+            <span data-i18n="brandCode"></span>
+            <input id="brandCode" type="text" class="border border-slate-300 rounded-lg px-2 py-1 uppercase" required />
+          </label>
+          <label class="flex flex-col text-sm gap-1">
+            <span data-i18n="brandColor"></span>
+            <input id="brandColor" type="color" class="border border-slate-300 rounded-lg h-10" />
+          </label>
+          <p id="brandHelper" class="text-xs text-slate-500 self-end" data-i18n="brandHelper"></p>
+        </div>
+        <div class="flex justify-end">
+          <button type="submit" id="brandSubmitBtn" class="px-3 py-2 rounded-lg bg-sky-600 text-white text-sm"></button>
+        </div>
+      </form>
+    </section>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4" id="kpiManagerSection">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <h2 class="text-lg font-semibold" data-i18n="manageKpis"></h2>
+        <button id="addKpiBtn" class="self-start px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-sm" data-i18n="addKpi"></button>
+      </div>
+      <div class="mt-4 grid gap-6 lg:grid-cols-2">
+        <form id="kpiDetailForm" class="space-y-4">
+          <div>
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="kpi"></span>
+              <select id="managerKpiSelect" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+            </label>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="kpiNameEn"></span>
+              <input id="kpiNameEn" type="text" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            </label>
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="kpiNameAr"></span>
+              <input id="kpiNameAr" type="text" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            </label>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-3">
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="kpiCode"></span>
+              <input id="kpiCode" type="text" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            </label>
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="kpiUnitType"></span>
+              <select id="kpiUnitType" class="border border-slate-300 rounded-lg px-2 py-1">
+                <option value="%">%</option>
+                <option value="#">#</option>
+                <option value="SAR">SAR</option>
+                <option value="TEXT">TEXT</option>
+              </select>
+            </label>
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="kpiDirection"></span>
+              <select id="kpiDirection" class="border border-slate-300 rounded-lg px-2 py-1">
+                <option value="HIGH">HIGH</option>
+                <option value="LOW">LOW</option>
+              </select>
+            </label>
+          </div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="kpiPercentMode"></span>
+              <select id="kpiPercentMode" class="border border-slate-300 rounded-lg px-2 py-1">
+                <option value="0_100">0-100%</option>
+                <option value="0_1">0-1</option>
+              </select>
+            </label>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" id="kpiSubmitBtn" class="px-3 py-2 rounded-lg bg-indigo-600 text-white text-sm" data-i18n="updateKpi"></button>
+          </div>
+        </form>
+        <form id="targetBandForm" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-base font-semibold" data-i18n="kpiThresholds"></h3>
+          </div>
+          <p id="targetBandHelper" class="text-xs text-slate-500"></p>
+          <label class="flex flex-col text-sm gap-1">
+            <span data-i18n="selectPeriod"></span>
+            <select id="kpiBandPeriod" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+          </label>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="level4Label"></span>
+              <input id="bandLevel4" type="number" step="any" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            </label>
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="level3Label"></span>
+              <input id="bandLevel3" type="number" step="any" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            </label>
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="level2Label"></span>
+              <input id="bandLevel2" type="number" step="any" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            </label>
+            <label class="flex flex-col text-sm gap-1">
+              <span data-i18n="level1Label"></span>
+              <input id="bandLevel1" type="number" step="any" class="border border-slate-300 rounded-lg px-2 py-1" required />
+            </label>
+          </div>
+          <div class="flex justify-end">
+            <button type="submit" id="targetBandSubmit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm" data-i18n="updateTargets"></button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4" id="insightsSection">
+      <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div>
+          <h2 class="text-lg font-semibold" data-i18n="insightsTitle"></h2>
+          <p class="text-sm text-slate-500" data-i18n="insightsSubtitle"></p>
+        </div>
+        <a
+          href="https://bscdesigner.com/ar/performance-measurement.htm"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center justify-center px-3 py-2 text-sm font-medium text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100"
+          data-i18n="insightsLink"
+        ></a>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2" id="insightsGrid"></div>
+    </section>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4" id="manualEntrySection">
+      <h2 class="text-lg font-semibold" data-i18n="manualEntryTitle"></h2>
+      <p class="text-sm text-slate-500 mt-1" data-i18n="manualEntryHelp"></p>
+      <form id="manualEntryForm" class="mt-4 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <label class="flex flex-col text-sm gap-1">
+          <span data-i18n="period"></span>
+          <input type="month" id="manualPeriod" class="border border-slate-300 rounded-lg px-2 py-1" required />
+        </label>
+        <label class="flex flex-col text-sm gap-1">
+          <span data-i18n="brand"></span>
+          <select id="manualBrand" class="border border-slate-300 rounded-lg px-2 py-1" required></select>
+        </label>
+        <label class="flex flex-col text-sm gap-1">
+          <span data-i18n="city"></span>
+          <select id="manualCity" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="flex flex-col text-sm gap-1">
+          <span data-i18n="kpi"></span>
+          <select id="manualKpi" class="border border-slate-300 rounded-lg px-2 py-1" required></select>
+        </label>
+        <label class="flex flex-col text-sm gap-1">
+          <span data-i18n="value"></span>
+          <input type="number" step="any" id="manualValue" class="border border-slate-300 rounded-lg px-2 py-1" required />
+        </label>
+        <label class="flex flex-col text-sm gap-1">
+          <span data-i18n="source"></span>
+          <select id="manualSource" class="border border-slate-300 rounded-lg px-2 py-1">
+            <option value="Manual">Manual</option>
+            <option value="CSV">CSV</option>
+          </select>
+        </label>
+        <div class="md:col-span-2 lg:col-span-3 flex justify-end">
+          <button type="submit" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm" data-i18n="manualSave"></button>
+        </div>
+      </form>
+    </section>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4">
+      <h2 class="text-lg font-semibold mb-4" data-i18n="legend"></h2>
+      <div class="flex flex-wrap gap-3 text-sm" id="legend"></div>
+    </section>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-6 py-4">
+      <h2 class="text-lg font-semibold mb-4" data-i18n="summary"></h2>
+      <div id="summaryCards" class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"></div>
+    </section>
+
+    <section class="mt-6 bg-white shadow rounded-xl px-3 sm:px-6 py-4 overflow-x-auto">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+        <div>
+          <h2 class="text-lg font-semibold" data-i18n="heatmap"></h2>
+          <p id="directionTag" class="text-xs text-slate-500"></p>
+        </div>
+        <p class="text-xs text-slate-500" data-i18n="heatmapHint"></p>
+      </div>
+      <div id="heatmap" class="min-w-full"></div>
+    </section>
+  </div>
+
+  <dialog id="quickDialog" class="rounded-xl p-0 w-full max-w-lg">
+    <form id="quickForm" method="dialog" class="bg-white rounded-xl overflow-hidden">
+      <div class="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+        <h3 class="text-lg font-semibold" data-i18n="quickEntryTitle"></h3>
+        <button type="button" id="closeQuick" class="text-slate-500 hover:text-slate-800">&times;</button>
+      </div>
+      <div class="px-6 py-4 space-y-4 text-sm">
+        <label class="flex flex-col gap-1">
+          <span data-i18n="period"></span>
+          <input type="month" id="quickPeriod" class="border border-slate-300 rounded-lg px-2 py-1" required />
+        </label>
+        <label class="flex flex-col gap-1">
+          <span data-i18n="brand"></span>
+          <select id="quickBrand" class="border border-slate-300 rounded-lg px-2 py-1" required></select>
+        </label>
+        <label class="flex flex-col gap-1">
+          <span data-i18n="city"></span>
+          <select id="quickCity" class="border border-slate-300 rounded-lg px-2 py-1"></select>
+        </label>
+        <label class="flex flex-col gap-1">
+          <span data-i18n="kpi"></span>
+          <select id="quickKpi" class="border border-slate-300 rounded-lg px-2 py-1" required></select>
+        </label>
+        <label class="flex flex-col gap-1">
+          <span data-i18n="value"></span>
+          <input type="number" step="any" id="quickValue" class="border border-slate-300 rounded-lg px-2 py-1" required />
+        </label>
+      </div>
+      <div class="px-6 py-3 bg-slate-50 border-t border-slate-200 flex justify-end gap-3">
+        <button type="button" id="quickCancel" class="px-3 py-2 rounded-lg border border-slate-300 text-sm" data-i18n="cancel"></button>
+        <button type="submit" id="quickSave" class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-sm" data-i18n="save"></button>
+      </div>
+    </form>
+  </dialog>
+
+  <script>
+    const DEFAULT_TARGET_PERIOD = "__default__";
+
+    const STRINGS = {
+      en: {
+        title: "KPI Lite Dashboard",
+        subtitle: "Rapid KPI monitoring prototype with offline storage.",
+        percentMode: "Percent mode",
+        importCsv: "Import CSV",
+        exportCsv: "Export CSV",
+        reset: "Reset data",
+        filters: "Filters",
+        brand: "Brand",
+        city: "City",
+        region: "Region",
+        kpi: "KPI",
+        period: "Period",
+        quickEntry: "Quick entry",
+        manageBrands: "Manage brands",
+        brandManagerHint: "Afco is the umbrella company—manage the LCP, PSK, CND, and OKS brands here.",
+        addBrand: "Add brand",
+        brandNameEn: "Brand name (English)",
+        brandNameAr: "Brand name (Arabic)",
+        brandCode: "Brand code",
+        brandColor: "Brand color",
+        brandHelper: "Use distinct colors to highlight each brand across the dashboard.",
+        newBrandOption: "➕ New brand",
+        createBrand: "Create brand",
+        updateBrand: "Update brand",
+        manageKpis: "Manage KPIs",
+        addKpi: "Add KPI",
+        kpiDetails: "KPI details",
+        kpiNameEn: "Name (English)",
+        kpiNameAr: "Name (Arabic)",
+        kpiCode: "Code",
+        kpiUnitType: "Unit type",
+        kpiDirection: "Direction",
+        kpiPercentMode: "Percent storage",
+        newKpiOption: "➕ New KPI",
+        createKpi: "Create KPI",
+        kpiThresholds: "Target bands",
+        selectPeriod: "Select period",
+        allPeriodsOption: "All months",
+        level4Label: "Level 4",
+        level3Label: "Level 3",
+        level2Label: "Level 2",
+        level1Label: "Level 1",
+        updateKpi: "Update KPI",
+        updateTargets: "Update targets",
+        manualEntryTitle: "Manual data entry",
+        manualEntryHelp: "Add or update actual values directly.",
+        insightsTitle: "Performance measurement ideas",
+        insightsSubtitle: "Highlights inspired by BSC Designer's guide to structured KPI programs.",
+        insightsLink: "Read the full guide",
+        source: "Source",
+        manualSave: "Save entry",
+        legend: "Color legend",
+        summary: "Summary",
+        heatmap: "KPI Heatmap",
+        heatmapHint: "Click any value to edit.",
+        value: "Value",
+        cancel: "Cancel",
+        save: "Save",
+        level: "Level",
+        noColor: "No color",
+        total: "Total",
+        langLabel: "العربية",
+        confirmReset: "Reset data to defaults?",
+        importSuccess: "CSV import completed",
+        importError: "CSV import failed",
+        quickEntryTitle: "Quick KPI update",
+        directionHigh: "Higher is better",
+        directionLow: "Lower is better",
+        noData: "No data to display",
+        saveKpiFirst: "Save the KPI before setting targets."
+      },
+      ar: {
+        title: "لوحة مؤشرات KPI لايت",
+        subtitle: "نموذج مراقبة مؤشرات سريع مع تخزين محلي.",
+        percentMode: "وضع النسبة %",
+        importCsv: "استيراد CSV",
+        exportCsv: "تصدير CSV",
+        reset: "إعادة ضبط البيانات",
+        filters: "المرشحات",
+        brand: "العلامة",
+        city: "المدينة",
+        region: "المنطقة",
+        kpi: "المؤشر",
+        period: "الفترة",
+        quickEntry: "إدخال سريع",
+        manageBrands: "إدارة العلامات التجارية",
+        brandManagerHint: "أفكو هي الشركة الأم، ويمكنك إدارة علاماتها الحالية LCP وPSK وCND وOKS هنا.",
+        addBrand: "إضافة علامة",
+        brandNameEn: "اسم العلامة (إنجليزي)",
+        brandNameAr: "اسم العلامة (عربي)",
+        brandCode: "رمز العلامة",
+        brandColor: "لون العلامة",
+        brandHelper: "استخدم اللون لتمييز العلامة داخل لوحة القيادة.",
+        newBrandOption: "➕ علامة جديدة",
+        createBrand: "إنشاء علامة",
+        updateBrand: "تحديث العلامة",
+        manageKpis: "إدارة مؤشرات الأداء",
+        addKpi: "إضافة مؤشر",
+        kpiDetails: "تفاصيل المؤشر",
+        kpiNameEn: "الاسم (إنجليزي)",
+        kpiNameAr: "الاسم (عربي)",
+        kpiCode: "الرمز",
+        kpiUnitType: "نوع الوحدة",
+        kpiDirection: "الاتجاه",
+        kpiPercentMode: "تخزين النسبة",
+        newKpiOption: "➕ مؤشر جديد",
+        createKpi: "إنشاء المؤشر",
+        kpiThresholds: "نطاقات التلوين",
+        selectPeriod: "اختر الفترة",
+        allPeriodsOption: "كل الأشهر",
+        level4Label: "المستوى 4",
+        level3Label: "المستوى 3",
+        level2Label: "المستوى 2",
+        level1Label: "المستوى 1",
+        updateKpi: "تحديث المؤشر",
+        updateTargets: "تحديث الأهداف",
+        manualEntryTitle: "إدخال البيانات يدويًا",
+        manualEntryHelp: "أضف أو عدّل القيم الفعلية مباشرة.",
+        insightsTitle: "أفكار لقياس الأداء",
+        insightsSubtitle: "ملخص مستوحى من دليل BSC Designer لبناء برامج مؤشرات متوازنة.",
+        insightsLink: "اقرأ الدليل الكامل",
+        source: "المصدر",
+        manualSave: "حفظ الإدخال",
+        legend: "دليل الألوان",
+        summary: "ملخص",
+        heatmap: "خريطة الحرارة للمؤشرات",
+        heatmapHint: "انقر على أي قيمة للتعديل.",
+        value: "القيمة",
+        cancel: "إلغاء",
+        save: "حفظ",
+        level: "المستوى",
+        noColor: "بدون لون",
+        total: "الإجمالي",
+        langLabel: "English",
+        confirmReset: "هل تريد إعادة ضبط البيانات الافتراضية؟",
+        importSuccess: "تم استيراد CSV",
+        importError: "تعذر استيراد CSV",
+        quickEntryTitle: "تحديث سريع للمؤشر",
+        directionHigh: "الأعلى أفضل",
+        directionLow: "الأقل أفضل",
+        noData: "لا توجد بيانات للعرض",
+        saveKpiFirst: "يرجى حفظ المؤشر قبل تحديد الأهداف."
+      }
+    };
+
+    const PERFORMANCE_INSIGHTS = {
+      en: [
+        {
+          title: "Anchor KPIs to strategic objectives",
+          description:
+            "Trace every metric to a clear strategic outcome so teams see why the KPI matters and how it supports the Balanced Scorecard perspective."
+        },
+        {
+          title: "Define thresholds that reflect value",
+          description:
+            "Pair each KPI with meaningful target bands, noting when a higher or lower result is desirable and how the four color levels communicate urgency."
+        },
+        {
+          title: "Blend leading and lagging indicators",
+          description:
+            "Combine predictive measures (training hours, pipeline health) with results metrics (revenue, satisfaction) to provide both early warnings and outcome tracking."
+        },
+        {
+          title: "Schedule reviews and improvement actions",
+          description:
+            "Use the dashboard during monthly performance dialogues, capture insights, and turn gaps into concrete initiatives with owners and deadlines."
+        }
+      ],
+      ar: [
+        {
+          title: "اربط المؤشرات بالأهداف الإستراتيجية",
+          description:
+            "ارسم مسار كل مؤشر نحو نتيجة استراتيجية واضحة حتى يفهم الفريق أهمية المقياس وكيف يدعم منظار بطاقة الأداء المتوازن."
+        },
+        {
+          title: "حدد نطاقات تعكس القيمة الحقيقية",
+          description:
+            "صمّم نطاقات الأهداف لكل مؤشر مع تحديد ما إذا كانت القيمة الأعلى أو الأقل هي الأفضل وكيف تنقل مستويات الألوان الأربعة درجة الإلحاح."
+        },
+        {
+          title: "وازن بين مؤشرات قيادية ومتأخرة",
+          description:
+            "ادمج المقاييس التنبؤية مثل ساعات التدريب وصحة خط المبيعات مع مقاييس النتائج كالإيرادات والرضا لتأمين إنذارات مبكرة ومتابعة للنتائج."
+        },
+        {
+          title: "جدول مراجعات وخطط تحسين مستمرة",
+          description:
+            "استخدم لوحة القيادة في اجتماعات الأداء الشهرية، وثّق الاستنتاجات وحوّل الفجوات إلى مبادرات محددة بمالكين وجداول زمنية."
+        }
+      ]
+    };
+
+    const REGION_LABELS = {
+      East: { en: "East", ar: "الشرقية" },
+      Center: { en: "Center", ar: "الوسطى" },
+      West: { en: "West", ar: "الغربية" }
+    };
+
+    const STORAGE_KEY = "kpiLiteDB_v2";
+    const NEW_KPI_ID = "__new__";
+    const NEW_BRAND_ID = "__new_brand__";
+
+    const DataAdapter = (() => {
+      const load = () => {
+        try {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) {
+            return JSON.parse(raw);
+          }
+        } catch (err) {
+          console.warn("Failed to load storage", err);
+        }
+        const seeded = seedDatabase();
+        save(seeded);
+        return seeded;
+      };
+
+      const save = (db) => {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(db));
+        } catch (err) {
+          console.warn("Failed to save storage", err);
+        }
+      };
+
+      const upsertActual = (db, actual) => {
+        const index = db.actuals.findIndex((item) => item.id === actual.id);
+        if (index >= 0) {
+          db.actuals[index] = { ...db.actuals[index], ...actual };
+        } else {
+          const id = actual.id || crypto.randomUUID?.() || `a_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+          db.actuals.push({ ...actual, id });
+        }
+        save(db);
+      };
+
+      const upsertTargetBand = (db, band) => {
+        const index = db.targetBands.findIndex((item) => item.kpiId === band.kpiId && item.period_key === band.period_key);
+        if (index >= 0) {
+          db.targetBands[index] = { ...db.targetBands[index], ...band };
+        } else {
+          const id = band.id || crypto.randomUUID?.() || `tb_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+          db.targetBands.push({ ...band, id });
+        }
+        save(db);
+      };
+
+      const createBrand = (db, brand) => {
+        const id = brand.id || crypto.randomUUID?.() || `b_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        const record = { color: "#0ea5e9", ...brand, id };
+        db.brands.push(record);
+        save(db);
+        return record;
+      };
+
+      const updateBrand = (db, updatedBrand) => {
+        const index = db.brands.findIndex((item) => item.id === updatedBrand.id);
+        if (index >= 0) {
+          db.brands[index] = { ...db.brands[index], ...updatedBrand };
+          save(db);
+        }
+      };
+
+      const createKpi = (db, kpi) => {
+        const id = kpi.id || crypto.randomUUID?.() || `k_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+        const record = { ...kpi, id };
+        db.kpis.push(record);
+        save(db);
+        return record;
+      };
+
+      const updateKpi = (db, updatedKpi) => {
+        const index = db.kpis.findIndex((item) => item.id === updatedKpi.id);
+        if (index >= 0) {
+          db.kpis[index] = { ...db.kpis[index], ...updatedKpi };
+          save(db);
+        }
+      };
+
+      const reset = () => {
+        const db = seedDatabase();
+        save(db);
+        return db;
+      };
+
+      return { load, save, upsertActual, upsertTargetBand, createBrand, updateBrand, createKpi, updateKpi, reset };
+    })();
+
+    function seedDatabase() {
+      const brands = [
+        { id: "b1", code: "LCP", name: { en: "LCP", ar: "إل سي بي" }, color: "#0EA5E9" },
+        { id: "b2", code: "PSK", name: { en: "PSK", ar: "بي إس كيه" }, color: "#22C55E" },
+        { id: "b3", code: "CND", name: { en: "CND", ar: "سي إن دي" }, color: "#FACC15" },
+        { id: "b4", code: "OKS", name: { en: "OKS", ar: "أو كيه إس" }, color: "#EC4899" }
+      ];
+
+      const cities = [
+        { id: "c1", name: { en: "Dammam", ar: "الدمام" }, region: "East" },
+        { id: "c2", name: { en: "Riyadh", ar: "الرياض" }, region: "Center" },
+        { id: "c3", name: { en: "Jeddah", ar: "جدة" }, region: "West" }
+      ];
+
+      const kpis = [
+        {
+          id: "k1",
+          code: "SALES_PCT",
+          name_en: "% Sales Achievement",
+          name_ar: "٪ تحقيق المبيعات",
+          unit_type: "%",
+          direction: "HIGH",
+          percentMode: "0_100"
+        },
+        {
+          id: "k2",
+          code: "NET_PROFIT",
+          name_en: "% Net Profit Growth",
+          name_ar: "٪ نمو صافي الربح",
+          unit_type: "%",
+          direction: "HIGH",
+          percentMode: "0_1"
+        },
+        {
+          id: "k3",
+          code: "FINES",
+          name_en: "Fines",
+          name_ar: "الغرامات",
+          unit_type: "SAR",
+          direction: "LOW",
+          percentMode: "0_100"
+        }
+      ];
+
+      const targetBands = [];
+      const months = Array.from({ length: 12 }, (_, idx) => `2025-${String(idx + 1).padStart(2, "0")}`);
+      kpis.forEach((kpi) => {
+        const base = kpi.direction === "LOW" ? 40 : 60;
+        const scale = kpi.percentMode === "0_1" ? 0.01 : 1;
+        const l4 = base * scale;
+        const l3 = l4 - (kpi.direction === "LOW" ? -5 : 5) * scale;
+        const l2 = l3 - (kpi.direction === "LOW" ? -7 : 7) * scale;
+        const l1 = l2 - (kpi.direction === "LOW" ? -10 : 10) * scale;
+        targetBands.push({
+          id: `${kpi.id}_${DEFAULT_TARGET_PERIOD}`,
+          kpiId: kpi.id,
+          period_type: "Monthly",
+          period_key: DEFAULT_TARGET_PERIOD,
+          level4: Number(l4.toFixed(4)),
+          level3: Number(l3.toFixed(4)),
+          level2: Number(l2.toFixed(4)),
+          level1: Number(l1.toFixed(4))
+        });
+      });
+
+      const actuals = [];
+      brands.forEach((brand, bIdx) => {
+        months.forEach((period) => {
+          kpis.forEach((kpi, kIdx) => {
+            const randomFactor = 0.75 + Math.random() * 0.5;
+            const base = kpi.direction === "LOW" ? 40 : 60;
+            let value = base * randomFactor + (bIdx - 1) * 5 + (kIdx - 1) * 3;
+            if (kpi.direction === "LOW") {
+              value = base / randomFactor;
+            }
+            if (kpi.percentMode === "0_1") {
+              value = value / 100;
+            }
+            actuals.push({
+              id: `a_${brand.id}_${kpi.id}_${period}`,
+              kpiId: kpi.id,
+              brandId: brand.id,
+              cityId: null,
+              period_key: period,
+              value: Number(value.toFixed(3)),
+              source: "Seed"
+            });
+          });
+        });
+      });
+
+      return { brands, cities, kpis, targetBands, actuals };
+    }
+
+    const state = {
+      lang: localStorage.getItem("kpiLiteLang") || "en",
+      db: null,
+      filters: {
+        brandId: "all",
+        cityId: "all",
+        kpiId: "all",
+        region: "all",
+        period: ""
+      },
+      brandManager: {
+        selectedBrandId: null
+      },
+      manager: {
+        selectedKpiId: null,
+        selectedPeriod: ""
+      },
+      uiPercentMode: localStorage.getItem("kpiLitePercentMode") || "0_100"
+    };
+
+    function t(key) {
+      return STRINGS[state.lang][key] || key;
+    }
+
+    function applyTranslations() {
+      document.querySelectorAll("[data-i18n]").forEach((el) => {
+        const key = el.getAttribute("data-i18n");
+        el.textContent = t(key);
+      });
+      document.getElementById("langToggle").textContent = t("langLabel");
+    }
+
+    function updateDirection() {
+      const html = document.documentElement;
+      if (state.lang === "ar") {
+        html.setAttribute("dir", "rtl");
+        html.setAttribute("lang", "ar");
+      } else {
+        html.setAttribute("dir", "ltr");
+        html.setAttribute("lang", "en");
+      }
+    }
+
+    function formatValue(kpi, value) {
+      if (value === null || value === undefined) return "";
+      const mode = state.uiPercentMode;
+      let displayValue = value;
+      if (kpi.unit_type === "%") {
+        if (mode === "0_100" && kpi.percentMode === "0_1") {
+          displayValue = value * 100;
+        } else if (mode === "0_1" && kpi.percentMode === "0_100") {
+          displayValue = value / 100;
+        }
+      }
+      let decimals = 1;
+      if (kpi.unit_type === "%") {
+        decimals = mode === "0_1" ? 3 : 1;
+      } else if (kpi.unit_type === "SAR") {
+        decimals = 2;
+      }
+      const suffix = kpi.unit_type === "%" ? " %" : (kpi.unit_type && kpi.unit_type !== "#" ? ` ${kpi.unit_type}` : "");
+      return `${displayValue.toFixed(decimals)}${suffix}`;
+    }
+
+    function toUiValue(kpi, value) {
+      if (value === null || value === undefined) return "";
+      if (kpi.unit_type === "%") {
+        if (state.uiPercentMode === "0_100" && kpi.percentMode === "0_1") {
+          return value * 100;
+        }
+        if (state.uiPercentMode === "0_1" && kpi.percentMode === "0_100") {
+          return value / 100;
+        }
+      }
+      return value;
+    }
+
+    function fromUiValue(kpi, value) {
+      if (value === null || value === undefined) return value;
+      if (kpi.unit_type === "%") {
+        if (state.uiPercentMode === "0_100" && kpi.percentMode === "0_1") {
+          return value / 100;
+        }
+        if (state.uiPercentMode === "0_1" && kpi.percentMode === "0_100") {
+          return value * 100;
+        }
+      }
+      return value;
+    }
+
+    function getKpiDisplayName(kpi) {
+      return state.lang === "ar" ? kpi.name_ar : kpi.name_en;
+    }
+
+    function getBrandDisplayName(brand) {
+      return brand.name[state.lang === "ar" ? "ar" : "en"];
+    }
+
+    function getCityDisplayName(city) {
+      return city.name[state.lang === "ar" ? "ar" : "en"];
+    }
+
+    function getRegionDisplayName(region) {
+      const label = REGION_LABELS[region];
+      if (!label) return region;
+      return state.lang === "ar" ? label.ar : label.en;
+    }
+
+    function calculateLevel(kpi, targetBand, value) {
+      if (value === null || value === undefined || value === "") return null;
+      if (Math.abs(value) < 1e-9) return null;
+      if (!targetBand) return null;
+      const scaledTarget = { ...targetBand };
+      let actualValue = value;
+      if (kpi.unit_type === "%") {
+        if (kpi.percentMode === "0_1" && state.uiPercentMode === "0_100") {
+          actualValue = value * 100;
+          scaledTarget.level1 *= 100;
+          scaledTarget.level2 *= 100;
+          scaledTarget.level3 *= 100;
+          scaledTarget.level4 *= 100;
+        }
+        if (kpi.percentMode === "0_100" && state.uiPercentMode === "0_1") {
+          actualValue = value / 100;
+          scaledTarget.level1 /= 100;
+          scaledTarget.level2 /= 100;
+          scaledTarget.level3 /= 100;
+          scaledTarget.level4 /= 100;
+        }
+      }
+      if (kpi.direction === "HIGH") {
+        if (actualValue >= scaledTarget.level4) return 4;
+        if (actualValue >= scaledTarget.level3) return 3;
+        if (actualValue >= scaledTarget.level2) return 2;
+        return 1;
+      }
+      if (kpi.direction === "LOW") {
+        if (actualValue <= scaledTarget.level4) return 4;
+        if (actualValue <= scaledTarget.level3) return 3;
+        if (actualValue <= scaledTarget.level2) return 2;
+        return 1;
+      }
+      return null;
+    }
+
+    function levelColor(level) {
+      switch (level) {
+        case 4:
+          return "bg-emerald-500/80 text-white";
+        case 3:
+          return "bg-lime-300 text-slate-900";
+        case 2:
+          return "bg-amber-200 text-slate-900";
+        case 1:
+          return "bg-rose-300 text-slate-900";
+        default:
+          return "bg-slate-100 text-slate-500";
+      }
+    }
+
+    function renderFilters() {
+      const brandSelect = document.getElementById("filterBrand");
+      brandSelect.innerHTML = state.db.brands.map((brand) => `<option value="${brand.id}">${getBrandDisplayName(brand)}</option>`).join("");
+      if (state.filters.brandId === "all" || !state.db.brands.find((brand) => brand.id === state.filters.brandId)) {
+        state.filters.brandId = state.db.brands[0]?.id || "";
+      }
+      brandSelect.value = state.filters.brandId;
+
+      const citySelect = document.getElementById("filterCity");
+      citySelect.innerHTML = `<option value="all">${t("total")}</option>` + state.db.cities.map((city) => `<option value="${city.id}">${getCityDisplayName(city)}</option>`).join("");
+      citySelect.value = state.filters.cityId;
+
+      const regionSelect = document.getElementById("filterRegion");
+      const regions = Array.from(new Set(state.db.cities.map((city) => city.region)));
+      regionSelect.innerHTML = `<option value="all">${t("total")}</option>` + regions.map((region) => `<option value="${region}">${getRegionDisplayName(region)}</option>`).join("");
+      regionSelect.value = state.filters.region;
+
+      const kpiSelect = document.getElementById("filterKpi");
+      const kpiOptions = `<option value="all">${t("total")}</option>` + state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
+      kpiSelect.innerHTML = kpiOptions;
+      if (!state.db.kpis.find((kpi) => kpi.id === state.filters.kpiId) && state.filters.kpiId !== "all") {
+        state.filters.kpiId = "all";
+      }
+      kpiSelect.value = state.filters.kpiId;
+
+      document.getElementById("filterPeriod").value = state.filters.period;
+
+      const quickBrand = document.getElementById("quickBrand");
+      quickBrand.innerHTML = state.db.brands.map((brand) => `<option value="${brand.id}">${getBrandDisplayName(brand)}</option>`).join("");
+      quickBrand.value = state.filters.brandId || state.db.brands[0]?.id || "";
+
+      const quickCity = document.getElementById("quickCity");
+      quickCity.innerHTML = `<option value="">${t("total")}</option>` + state.db.cities.map((city) => `<option value="${city.id}">${getCityDisplayName(city)}</option>`).join("");
+      quickCity.value = state.filters.cityId !== "all" ? state.filters.cityId : "";
+
+      const quickKpi = document.getElementById("quickKpi");
+      quickKpi.innerHTML = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
+      const managerFallbackKpi =
+        state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+          ? state.manager.selectedKpiId
+          : state.db.kpis[0]?.id;
+      const quickKpiValue = state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi;
+      if (quickKpiValue) {
+        quickKpi.value = quickKpiValue;
+      }
+
+      const manualBrand = document.getElementById("manualBrand");
+      if (manualBrand) {
+        manualBrand.innerHTML = state.db.brands.map((brand) => `<option value="${brand.id}">${getBrandDisplayName(brand)}</option>`).join("");
+        manualBrand.value = state.filters.brandId || manualBrand.options[0]?.value || "";
+      }
+
+      const manualCity = document.getElementById("manualCity");
+      if (manualCity) {
+        manualCity.innerHTML = `<option value="">${t("total")}</option>` + state.db.cities.map((city) => `<option value="${city.id}">${getCityDisplayName(city)}</option>`).join("");
+        manualCity.value = state.filters.cityId !== "all" ? state.filters.cityId : "";
+      }
+
+      const manualKpi = document.getElementById("manualKpi");
+      if (manualKpi) {
+        manualKpi.innerHTML = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
+        const manualKpiValue = state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi;
+        if (manualKpiValue) {
+          manualKpi.value = manualKpiValue;
+        }
+      }
+
+      const manualPeriod = document.getElementById("manualPeriod");
+      if (manualPeriod) {
+        manualPeriod.value = state.filters.period || state.manager.selectedPeriod || "";
+      }
+
+      document.getElementById("percentToggle").value = state.uiPercentMode;
+    }
+
+    function renderLegend() {
+      const container = document.getElementById("legend");
+      const items = [4, 3, 2, 1].map((level) => `
+        <div class="flex items-center gap-2">
+          <span class="inline-flex w-9 h-9 rounded-full ${levelColor(level)} items-center justify-center font-semibold">${level}</span>
+          <span>${t("level")} ${level}</span>
+        </div>
+      `);
+      items.push(`
+        <div class="flex items-center gap-2">
+          <span class="inline-flex w-9 h-9 rounded-full bg-slate-200 items-center justify-center font-semibold text-slate-500">--</span>
+          <span>${t("noColor")}</span>
+        </div>
+      `);
+      container.innerHTML = items.join("");
+    }
+
+    function renderInsights() {
+      const grid = document.getElementById("insightsGrid");
+      if (!grid) return;
+      const items = PERFORMANCE_INSIGHTS[state.lang] || [];
+      grid.innerHTML = items
+        .map(
+          (item) => `
+            <article class="h-full p-5 border border-slate-200 rounded-xl bg-slate-50/60 flex flex-col gap-2">
+              <h3 class="text-base font-semibold text-slate-800">${item.title}</h3>
+              <p class="text-sm text-slate-600 leading-relaxed">${item.description}</p>
+            </article>
+          `
+        )
+        .join("");
+    }
+
+    function summarizeLevels(cells) {
+      const summary = { 1: 0, 2: 0, 3: 0, 4: 0 };
+      cells.forEach((cell) => {
+        if (cell.level) {
+          summary[cell.level] += 1;
+        }
+      });
+      return summary;
+    }
+
+    function renderSummary(cells) {
+      const summary = summarizeLevels(cells);
+      const container = document.getElementById("summaryCards");
+      container.innerHTML = [4, 3, 2, 1].map((level) => `
+        <div class="rounded-xl border border-slate-200 p-4 flex flex-col gap-2 ${levelColor(level)}">
+          <span class="text-sm">${t("level")} ${level}</span>
+          <span class="text-2xl font-semibold">${summary[level]}</span>
+        </div>
+      `).join("");
+    }
+
+    function getFilteredPeriods(kpiId) {
+      const periodSet = new Set();
+      state.db.targetBands.forEach((band) => {
+        if (band.kpiId === kpiId && band.period_key !== DEFAULT_TARGET_PERIOD) {
+          periodSet.add(band.period_key);
+        }
+      });
+      state.db.actuals.forEach((actual) => {
+        if (actual.kpiId === kpiId) {
+          periodSet.add(actual.period_key);
+        }
+      });
+      return Array.from(periodSet).sort();
+    }
+
+    function getDefaultPeriodForKpis(kpis) {
+      const periodSet = new Set();
+      kpis.forEach((kpi) => {
+        getFilteredPeriods(kpi.id).forEach((period) => periodSet.add(period));
+      });
+      if (periodSet.size === 0) {
+        return "";
+      }
+      return Array.from(periodSet).sort()[0];
+    }
+
+    function findTargetBand(kpiId, period) {
+      const direct = state.db.targetBands.find(
+        (band) => band.kpiId === kpiId && band.period_key === period
+      );
+      if (direct) return direct;
+      return state.db.targetBands.find(
+        (band) => band.kpiId === kpiId && band.period_key === DEFAULT_TARGET_PERIOD
+      ) || null;
+    }
+
+    function findActual(kpiId, brandId, period, cityId) {
+      return state.db.actuals.find((actual) => actual.kpiId === kpiId && actual.brandId === brandId && actual.period_key === period && (cityId ? actual.cityId === cityId : !actual.cityId));
+    }
+
+    function convertTargetBandForUi(kpi, band) {
+      const convert = (value) => {
+        if (value === null || value === undefined || value === "") return "";
+        if (kpi.unit_type === "%") {
+          if (kpi.percentMode === "0_1" && state.uiPercentMode === "0_100") {
+            return Number((value * 100).toFixed(4));
+          }
+          if (kpi.percentMode === "0_100" && state.uiPercentMode === "0_1") {
+            return Number((value / 100).toFixed(6));
+          }
+        }
+        return Number(value);
+      };
+      return {
+        level1: band ? convert(band.level1) : "",
+        level2: band ? convert(band.level2) : "",
+        level3: band ? convert(band.level3) : "",
+        level4: band ? convert(band.level4) : ""
+      };
+    }
+
+    function convertTargetBandFromUi(kpi, values) {
+      const convert = (value) => {
+        const num = parseFloat(value);
+        if (Number.isNaN(num)) {
+          return null;
+        }
+        let result = num;
+        if (kpi.unit_type === "%") {
+          if (kpi.percentMode === "0_1" && state.uiPercentMode === "0_100") {
+            result = num / 100;
+          } else if (kpi.percentMode === "0_100" && state.uiPercentMode === "0_1") {
+            result = num * 100;
+          }
+        }
+        return Number(result.toFixed(6));
+      };
+      return {
+        level1: convert(values.level1),
+        level2: convert(values.level2),
+        level3: convert(values.level3),
+        level4: convert(values.level4)
+      };
+    }
+
+    function ensureBrandManagerDefaults() {
+      if (!state.db) return;
+      if (state.filters.brandId && state.filters.brandId !== "all") {
+        state.brandManager.selectedBrandId = state.filters.brandId;
+      }
+      const brands = state.db.brands;
+      const fallbackId = brands[0]?.id || NEW_BRAND_ID;
+      if (!state.brandManager.selectedBrandId) {
+        state.brandManager.selectedBrandId = fallbackId;
+      }
+      if (
+        state.brandManager.selectedBrandId !== NEW_BRAND_ID &&
+        !brands.find((brand) => brand.id === state.brandManager.selectedBrandId)
+      ) {
+        state.brandManager.selectedBrandId = fallbackId;
+      }
+      if (!state.brandManager.selectedBrandId) {
+        state.brandManager.selectedBrandId = NEW_BRAND_ID;
+      }
+    }
+
+    function ensureManagerDefaults() {
+      if (!state.db) return;
+      if (!state.manager.selectedKpiId) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
+      }
+      if (
+        state.manager.selectedKpiId !== NEW_KPI_ID &&
+        !state.db.kpis.find((item) => item.id === state.manager.selectedKpiId)
+      ) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
+      }
+      const selectedKpi =
+        state.manager.selectedKpiId === NEW_KPI_ID
+          ? null
+          : state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+      const periods = selectedKpi ? getFilteredPeriods(selectedKpi.id) : [];
+      if (!state.manager.selectedPeriod) {
+        state.manager.selectedPeriod = DEFAULT_TARGET_PERIOD;
+      }
+      if (state.filters.period) {
+        state.manager.selectedPeriod = state.filters.period;
+      }
+      if (state.manager.selectedPeriod === DEFAULT_TARGET_PERIOD) {
+        return;
+      }
+      if (state.manager.selectedPeriod && state.manager.selectedPeriod.length === 7) {
+        return;
+      }
+      if (periods.length > 0) {
+        state.manager.selectedPeriod = periods[0];
+      } else {
+        const today = new Date();
+        state.manager.selectedPeriod = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+      }
+    }
+
+    function renderBrandManager() {
+      ensureBrandManagerDefaults();
+      const select = document.getElementById("managerBrandSelect");
+      if (!select) return;
+      const options = state.db.brands
+        .map((brand) => `<option value="${brand.id}">${getBrandDisplayName(brand)}</option>`)
+        .join("");
+      select.innerHTML = `${options}<option value="${NEW_BRAND_ID}">${t("newBrandOption")}</option>`;
+      if (!state.brandManager.selectedBrandId) {
+        state.brandManager.selectedBrandId = state.db.brands[0]?.id || NEW_BRAND_ID;
+      }
+      if (
+        state.brandManager.selectedBrandId !== NEW_BRAND_ID &&
+        !state.db.brands.find((brand) => brand.id === state.brandManager.selectedBrandId)
+      ) {
+        state.brandManager.selectedBrandId = state.db.brands[0]?.id || NEW_BRAND_ID;
+      }
+      select.value = state.brandManager.selectedBrandId;
+      const selectedBrand =
+        state.brandManager.selectedBrandId === NEW_BRAND_ID
+          ? null
+          : state.db.brands.find((brand) => brand.id === state.brandManager.selectedBrandId);
+      const nameEnInput = document.getElementById("brandNameEn");
+      const nameArInput = document.getElementById("brandNameAr");
+      const codeInput = document.getElementById("brandCode");
+      const colorInput = document.getElementById("brandColor");
+      if (nameEnInput) nameEnInput.value = selectedBrand ? selectedBrand.name.en : "";
+      if (nameArInput) nameArInput.value = selectedBrand ? selectedBrand.name.ar : "";
+      if (codeInput) codeInput.value = selectedBrand ? selectedBrand.code : "";
+      if (colorInput) colorInput.value = selectedBrand?.color || "#0EA5E9";
+      const submitBtn = document.getElementById("brandSubmitBtn");
+      if (submitBtn) {
+        submitBtn.textContent = t(selectedBrand ? "updateBrand" : "createBrand");
+      }
+    }
+
+    function renderKpiManager() {
+      ensureManagerDefaults();
+      const select = document.getElementById("managerKpiSelect");
+      if (!select) return;
+      const options = state.db.kpis.map((kpi) => `<option value="${kpi.id}">${getKpiDisplayName(kpi)}</option>`).join("");
+      select.innerHTML = `${options}<option value="${NEW_KPI_ID}">${t("newKpiOption")}</option>`;
+      if (
+        state.manager.selectedKpiId !== NEW_KPI_ID &&
+        !state.db.kpis.find((kpi) => kpi.id === state.manager.selectedKpiId)
+      ) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
+      }
+      if (!state.manager.selectedKpiId) {
+        state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
+      }
+      select.value = state.manager.selectedKpiId;
+      const selectedKpi =
+        state.manager.selectedKpiId === NEW_KPI_ID
+          ? null
+          : state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+      const isNew = !selectedKpi;
+      const nameEnInput = document.getElementById("kpiNameEn");
+      const nameArInput = document.getElementById("kpiNameAr");
+      const codeInput = document.getElementById("kpiCode");
+      const unitSelect = document.getElementById("kpiUnitType");
+      const directionSelect = document.getElementById("kpiDirection");
+      const percentModeSelect = document.getElementById("kpiPercentMode");
+      const periodInput = document.getElementById("kpiBandPeriod");
+      const bandInputs = {
+        level4: document.getElementById("bandLevel4"),
+        level3: document.getElementById("bandLevel3"),
+        level2: document.getElementById("bandLevel2"),
+        level1: document.getElementById("bandLevel1")
+      };
+      if (nameEnInput) nameEnInput.value = selectedKpi ? selectedKpi.name_en : "";
+      if (nameArInput) nameArInput.value = selectedKpi ? selectedKpi.name_ar : "";
+      if (codeInput) codeInput.value = selectedKpi ? selectedKpi.code : "";
+      if (unitSelect) unitSelect.value = selectedKpi ? selectedKpi.unit_type : "%";
+      if (directionSelect) directionSelect.value = selectedKpi ? selectedKpi.direction : "HIGH";
+      if (percentModeSelect) percentModeSelect.value = selectedKpi ? selectedKpi.percentMode : "0_100";
+
+      if (periodInput) {
+        const monthSet = new Set();
+        const referenceSources = [
+          state.filters.period,
+          state.manager.selectedPeriod !== DEFAULT_TARGET_PERIOD ? state.manager.selectedPeriod : "",
+          selectedKpi
+            ? state.db.actuals.find((item) => item.kpiId === selectedKpi.id)?.period_key
+            : state.db.actuals[0]?.period_key
+        ].filter(Boolean);
+        const referencePeriod = referenceSources.find((value) => value && value.length === 7) || "";
+        if (referencePeriod) {
+          const [year] = referencePeriod.split("-");
+          Array.from({ length: 12 }, (_, idx) => `${year}-${String(idx + 1).padStart(2, "0")}`).forEach((period) =>
+            monthSet.add(period)
+          );
+        }
+        getFilteredPeriods(selectedKpi?.id || "").forEach((period) => monthSet.add(period));
+        if (monthSet.size === 0) {
+          const today = new Date();
+          const year = today.getFullYear();
+          Array.from({ length: 12 }, (_, idx) => `${year}-${String(idx + 1).padStart(2, "0")}`).forEach((period) =>
+            monthSet.add(period)
+          );
+        }
+        const months = Array.from(monthSet).filter((period) => period && period.length === 7).sort();
+        const selectedPeriod = state.manager.selectedPeriod || DEFAULT_TARGET_PERIOD;
+        const options = [`<option value="${DEFAULT_TARGET_PERIOD}">${t("allPeriodsOption")}</option>`];
+        months.forEach((month) => {
+          options.push(`<option value="${month}">${month}</option>`);
+        });
+        if (
+          selectedPeriod &&
+          selectedPeriod !== DEFAULT_TARGET_PERIOD &&
+          !months.includes(selectedPeriod)
+        ) {
+          options.push(`<option value="${selectedPeriod}">${selectedPeriod}</option>`);
+        }
+        periodInput.innerHTML = options.join("");
+        periodInput.value = selectedPeriod;
+        periodInput.disabled = isNew;
+      }
+
+      let uiBand = { level1: "", level2: "", level3: "", level4: "" };
+      if (!isNew && state.manager.selectedPeriod) {
+        const targetBand = findTargetBand(selectedKpi.id, state.manager.selectedPeriod);
+        uiBand = convertTargetBandForUi(selectedKpi, targetBand);
+      }
+      Object.entries(bandInputs).forEach(([key, input]) => {
+        if (!input) return;
+        const value = uiBand[key];
+        input.value = value !== "" ? value : "";
+        input.disabled = isNew;
+      });
+      const targetHelper = document.getElementById("targetBandHelper");
+      if (targetHelper) {
+        targetHelper.textContent = isNew ? t("saveKpiFirst") : "";
+      }
+      const targetSubmit = document.getElementById("targetBandSubmit");
+      if (targetSubmit) {
+        targetSubmit.disabled = isNew;
+        targetSubmit.textContent = t("updateTargets");
+      }
+      const detailSubmit = document.getElementById("kpiSubmitBtn");
+      if (detailSubmit) {
+        detailSubmit.textContent = t(isNew ? "createKpi" : "updateKpi");
+      }
+    }
+
+    function renderManualEntry() {
+      const manualValueInput = document.getElementById("manualValue");
+      const manualKpiSelect = document.getElementById("manualKpi");
+      if (!manualValueInput || !manualKpiSelect) return;
+      const kpi = state.db.kpis.find((item) => item.id === manualKpiSelect.value);
+      if (kpi && kpi.unit_type === "%") {
+        manualValueInput.placeholder = state.uiPercentMode === "0_100" ? "0 - 100" : "0 - 1";
+      } else {
+        manualValueInput.placeholder = "";
+      }
+    }
+
+    function renderHeatmap() {
+      const container = document.getElementById("heatmap");
+      if (!container) return;
+      const directionTag = document.getElementById("directionTag");
+      const effectiveBrandId = state.filters.brandId !== "all" ? state.filters.brandId : state.db.brands[0]?.id;
+      const cityId = state.filters.cityId !== "all" ? state.filters.cityId : null;
+      const kpis = state.filters.kpiId === "all" ? state.db.kpis : state.db.kpis.filter((kpi) => kpi.id === state.filters.kpiId);
+      if (directionTag) {
+        directionTag.innerHTML = "";
+        const brandObj = effectiveBrandId ? state.db.brands.find((b) => b.id === effectiveBrandId) : null;
+        const cityObj = cityId ? state.db.cities.find((c) => c.id === cityId) : null;
+        if (brandObj) {
+          const brandSpan = document.createElement("span");
+          brandSpan.className = "inline-flex items-center gap-1";
+          const dot = document.createElement("span");
+          dot.className = "inline-block h-2 w-2 rounded-full";
+          dot.style.backgroundColor = brandObj.color || "#0EA5E9";
+          brandSpan.appendChild(dot);
+          const label = document.createElement("span");
+          label.textContent = getBrandDisplayName(brandObj);
+          brandSpan.appendChild(label);
+          directionTag.appendChild(brandSpan);
+        }
+        if (cityObj) {
+          if (directionTag.childNodes.length) {
+            const separator = document.createElement("span");
+            separator.textContent = " • ";
+            directionTag.appendChild(separator);
+          }
+          const citySpan = document.createElement("span");
+          citySpan.textContent = getCityDisplayName(cityObj);
+          directionTag.appendChild(citySpan);
+        }
+      }
+      if (!kpis.length || !effectiveBrandId) {
+        container.innerHTML = `<div class="px-4 py-10 text-center text-sm text-slate-500">${t("noData")}</div>`;
+        renderSummary([]);
+        return;
+      }
+
+      const referencePeriodRaw =
+        state.filters.period ||
+        (state.manager.selectedPeriod !== DEFAULT_TARGET_PERIOD ? state.manager.selectedPeriod : "") ||
+        getDefaultPeriodForKpis(kpis);
+      const referencePeriod = referencePeriodRaw && referencePeriodRaw.length === 7 ? referencePeriodRaw : "";
+      let months = [];
+      if (state.filters.period) {
+        months = [state.filters.period];
+      } else if (referencePeriod) {
+        const [year] = referencePeriod.split("-");
+        months = Array.from({ length: 12 }, (_, idx) => `${year}-${String(idx + 1).padStart(2, "0")}`);
+      } else {
+        const today = new Date();
+        const year = today.getFullYear();
+        months = Array.from({ length: 12 }, (_, idx) => `${year}-${String(idx + 1).padStart(2, "0")}`);
+      }
+
+      const headerCells = months.map((month) => `<th class="sticky top-0 bg-slate-50 px-3 py-2 text-center text-xs font-semibold uppercase tracking-wide">${month}</th>`).join("");
+      const rows = [`
+        <thead>
+          <tr>
+            <th class="sticky top-0 bg-slate-50 px-3 py-2 text-start text-xs font-semibold uppercase tracking-wide">${t("kpi")}</th>
+            ${headerCells}
+          </tr>
+        </thead>
+      `];
+
+      const cells = [];
+      const bodyRows = kpis.map((kpi) => {
+        const directionLabel = kpi.direction === "LOW" ? t("directionLow") : t("directionHigh");
+        const firstCell = `
+          <th class="px-3 py-3 bg-slate-50 text-start align-top">
+            <div class="font-medium text-sm">${getKpiDisplayName(kpi)}</div>
+            <div class="text-xs text-slate-500 mt-1">${directionLabel}</div>
+          </th>
+        `;
+        const valueCells = months.map((month) => {
+          const targetBand = findTargetBand(kpi.id, month);
+          const actual = findActual(kpi.id, effectiveBrandId, month, cityId);
+          const value = actual ? actual.value : null;
+          const level = value !== null ? calculateLevel(kpi, targetBand, value) : null;
+          cells.push({ level });
+          const colorClass = levelColor(level);
+          const displayValue = actual ? formatValue(kpi, actual.value) : "--";
+          return `<td data-brand="${effectiveBrandId || ""}" data-period="${month}" data-kpi="${kpi.id}" data-city="${cityId || ""}" class="cursor-pointer text-center px-3 py-3 align-middle text-sm ${colorClass}">${displayValue}</td>`;
+        }).join("");
+        return `<tr class="border-b border-slate-100">${firstCell}${valueCells}</tr>`;
+      }).join("");
+
+      if (!bodyRows.trim() || !months.length) {
+        container.innerHTML = `<div class="px-4 py-10 text-center text-sm text-slate-500">${t("noData")}</div>`;
+        renderSummary([]);
+        return;
+      }
+
+      rows.push(`<tbody>${bodyRows}</tbody>`);
+      container.innerHTML = `<table class="min-w-full divide-y divide-slate-200 rounded-lg overflow-hidden">${rows.join("")}</table>`;
+      attachCellHandlers();
+      renderSummary(cells);
+    }
+
+    function attachCellHandlers() {
+      document.querySelectorAll("#heatmap td[data-brand]").forEach((cell) => {
+        cell.addEventListener("click", () => {
+          const brandId = cell.getAttribute("data-brand");
+          const period = cell.getAttribute("data-period");
+          const kpiId = cell.getAttribute("data-kpi");
+          const cityId = cell.getAttribute("data-city") || "";
+          openQuickDialog({ brandId, period, kpiId, cityId });
+        });
+      });
+    }
+
+    function openQuickDialog({ brandId, period, kpiId, cityId }) {
+      const dialog = document.getElementById("quickDialog");
+      document.getElementById("quickPeriod").value = period || state.filters.period || "";
+      const fallbackBrandId = state.db.brands[0]?.id || "";
+      const effectiveBrandId = brandId && brandId !== "all" ? brandId : (state.filters.brandId !== "all" ? state.filters.brandId : fallbackBrandId);
+      const effectiveCityId = cityId && cityId !== "all" ? cityId : (state.filters.cityId !== "all" ? state.filters.cityId : "");
+      document.getElementById("quickBrand").value = effectiveBrandId;
+      document.getElementById("quickCity").value = effectiveCityId;
+      const managerFallbackKpi =
+        state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+          ? state.manager.selectedKpiId
+          : state.db.kpis[0]?.id;
+      const selectedKpiId = kpiId || (state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi);
+      document.getElementById("quickKpi").value = selectedKpiId;
+      if (period) {
+        state.manager.selectedPeriod = period;
+      }
+      if (selectedKpiId) {
+        state.manager.selectedKpiId = selectedKpiId;
+        renderKpiManager();
+      }
+      const kpi = state.db.kpis.find((item) => item.id === selectedKpiId);
+      const actual = findActual(selectedKpiId, effectiveBrandId, period, effectiveCityId || null);
+      const input = document.getElementById("quickValue");
+      input.value = actual && kpi ? toUiValue(kpi, actual.value) : "";
+      if (kpi && kpi.unit_type === "%") {
+        input.placeholder = state.uiPercentMode === "0_100" ? "0 - 100" : "0 - 1";
+      } else {
+        input.placeholder = "";
+      }
+      dialog.showModal();
+    }
+
+    function closeQuickDialog() {
+      document.getElementById("quickDialog").close();
+    }
+
+    function setupHeaderActions() {
+      document.getElementById("langToggle").addEventListener("click", () => {
+        state.lang = state.lang === "en" ? "ar" : "en";
+        localStorage.setItem("kpiLiteLang", state.lang);
+        applyTranslations();
+        updateDirection();
+        renderAll();
+      });
+
+      document.getElementById("percentToggle").addEventListener("change", (event) => {
+        state.uiPercentMode = event.target.value;
+        localStorage.setItem("kpiLitePercentMode", state.uiPercentMode);
+        renderAll();
+      });
+
+      document.getElementById("importCsv").addEventListener("click", () => {
+        document.getElementById("csvInput").click();
+      });
+
+      document.getElementById("csvInput").addEventListener("change", async (event) => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          const text = await file.text();
+          importCsv(text);
+          alert(t("importSuccess"));
+        } catch (err) {
+          console.error(err);
+          alert(t("importError"));
+        } finally {
+          event.target.value = "";
+        }
+      });
+
+      document.getElementById("exportCsv").addEventListener("click", () => {
+        const csv = exportCsv();
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "kpi_actuals.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+      });
+
+      document.getElementById("resetData").addEventListener("click", () => {
+        if (confirm(t("confirmReset"))) {
+          state.db = DataAdapter.reset();
+          state.filters.brandId = state.db.brands[0]?.id || "all";
+          state.filters.cityId = "all";
+          state.filters.kpiId = "all";
+          state.filters.region = "all";
+          state.filters.period = "";
+          state.brandManager.selectedBrandId = state.filters.brandId || NEW_BRAND_ID;
+          state.manager.selectedKpiId = state.db.kpis[0]?.id || NEW_KPI_ID;
+          state.manager.selectedPeriod = DEFAULT_TARGET_PERIOD;
+          renderAll();
+        }
+      });
+    }
+
+    function setupFilterHandlers() {
+      document.getElementById("filterBrand").addEventListener("change", (event) => {
+        state.filters.brandId = event.target.value;
+        state.brandManager.selectedBrandId = state.filters.brandId;
+        const quickBrand = document.getElementById("quickBrand");
+        quickBrand.value = state.filters.brandId || state.db.brands[0]?.id || "";
+        const manualBrand = document.getElementById("manualBrand");
+        if (manualBrand) {
+          manualBrand.value = state.filters.brandId || manualBrand.options[0]?.value || "";
+        }
+        renderBrandManager();
+        renderManualEntry();
+        renderHeatmap();
+      });
+
+      document.getElementById("filterCity").addEventListener("change", (event) => {
+        state.filters.cityId = event.target.value;
+        const quickCity = document.getElementById("quickCity");
+        quickCity.value = state.filters.cityId !== "all" ? state.filters.cityId : "";
+        const manualCity = document.getElementById("manualCity");
+        if (manualCity) {
+          manualCity.value = state.filters.cityId !== "all" ? state.filters.cityId : "";
+        }
+        renderManualEntry();
+        renderHeatmap();
+      });
+
+      document.getElementById("filterRegion").addEventListener("change", (event) => {
+        state.filters.region = event.target.value;
+        if (state.filters.region !== "all") {
+          const cities = state.db.cities.filter((city) => city.region === state.filters.region);
+          state.filters.cityId = cities.length > 0 ? cities[0].id : "all";
+        } else {
+          state.filters.cityId = "all";
+        }
+        renderFilters();
+        renderHeatmap();
+      });
+
+      document.getElementById("filterKpi").addEventListener("change", (event) => {
+        state.filters.kpiId = event.target.value;
+        const quickKpi = document.getElementById("quickKpi");
+        const managerFallbackKpi =
+          state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+            ? state.manager.selectedKpiId
+            : state.db.kpis[0]?.id;
+        const effectiveKpi = state.filters.kpiId !== "all" ? state.filters.kpiId : managerFallbackKpi;
+        if (effectiveKpi) {
+          quickKpi.value = effectiveKpi;
+          const manualKpi = document.getElementById("manualKpi");
+          if (manualKpi) {
+            manualKpi.value = effectiveKpi;
+          }
+          if (state.filters.kpiId !== "all") {
+            state.manager.selectedKpiId = state.filters.kpiId;
+          }
+        }
+        renderManualEntry();
+        renderHeatmap();
+      });
+
+      document.getElementById("filterPeriod").addEventListener("change", (event) => {
+        state.filters.period = event.target.value;
+        state.manager.selectedPeriod = state.filters.period || state.manager.selectedPeriod;
+        renderKpiManager();
+        renderManualEntry();
+        renderHeatmap();
+      });
+
+      document.getElementById("quickEntryBtn").addEventListener("click", () => {
+        openQuickDialog({
+          brandId: state.filters.brandId,
+          period: state.filters.period || "",
+          kpiId:
+            state.filters.kpiId !== "all"
+              ? state.filters.kpiId
+              : (state.manager.selectedKpiId && state.manager.selectedKpiId !== NEW_KPI_ID
+                  ? state.manager.selectedKpiId
+                  : state.db.kpis[0]?.id),
+          cityId: state.filters.cityId
+        });
+      });
+    }
+
+    function setupBrandManager() {
+      const addButton = document.getElementById("addBrandBtn");
+      if (addButton) {
+        addButton.addEventListener("click", () => {
+          state.brandManager.selectedBrandId = NEW_BRAND_ID;
+          renderBrandManager();
+        });
+      }
+
+      const select = document.getElementById("managerBrandSelect");
+      if (select) {
+        select.addEventListener("change", (event) => {
+          const value = event.target.value;
+          state.brandManager.selectedBrandId = value;
+          if (value !== NEW_BRAND_ID) {
+            state.filters.brandId = value;
+            const filterBrand = document.getElementById("filterBrand");
+            if (filterBrand) {
+              filterBrand.value = value;
+            }
+            renderFilters();
+            renderManualEntry();
+            renderHeatmap();
+          }
+          renderBrandManager();
+        });
+      }
+
+      const form = document.getElementById("brandDetailForm");
+      if (form) {
+        form.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const nameEn = document.getElementById("brandNameEn").value.trim();
+          const nameAr = document.getElementById("brandNameAr").value.trim();
+          const code = document.getElementById("brandCode").value.trim().toUpperCase();
+          const color = document.getElementById("brandColor").value || "#0EA5E9";
+          const existing = state.db.brands.find((brand) => brand.id === state.brandManager.selectedBrandId);
+          if (!existing) {
+            const created = DataAdapter.createBrand(state.db, {
+              code,
+              name: { en: nameEn || code, ar: nameAr || nameEn || code },
+              color
+            });
+            state.brandManager.selectedBrandId = created.id;
+            state.filters.brandId = created.id;
+          } else {
+            DataAdapter.updateBrand(state.db, {
+              ...existing,
+              code,
+              name: { en: nameEn || existing.name.en, ar: nameAr || existing.name.ar },
+              color
+            });
+          }
+          renderFilters();
+          renderBrandManager();
+          renderManualEntry();
+          renderHeatmap();
+        });
+      }
+    }
+
+    function setupKpiManager() {
+      const addButton = document.getElementById("addKpiBtn");
+      if (addButton) {
+        addButton.addEventListener("click", () => {
+          state.manager.selectedKpiId = NEW_KPI_ID;
+          renderKpiManager();
+        });
+      }
+      const kpiSelect = document.getElementById("managerKpiSelect");
+      if (kpiSelect) {
+        kpiSelect.addEventListener("change", (event) => {
+          const value = event.target.value;
+          state.manager.selectedKpiId = value;
+          if (value !== NEW_KPI_ID && state.filters.kpiId !== "all") {
+            state.filters.kpiId = value;
+            const filterKpi = document.getElementById("filterKpi");
+            if (filterKpi) {
+              filterKpi.value = state.filters.kpiId;
+            }
+          }
+          renderFilters();
+          renderKpiManager();
+          renderManualEntry();
+          renderHeatmap();
+        });
+      }
+
+      const periodInput = document.getElementById("kpiBandPeriod");
+      if (periodInput) {
+        periodInput.addEventListener("change", (event) => {
+          state.manager.selectedPeriod = event.target.value;
+          renderKpiManager();
+          renderHeatmap();
+        });
+      }
+
+      const detailForm = document.getElementById("kpiDetailForm");
+      if (detailForm) {
+        detailForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const existing = state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+          const formValues = {
+            name_en: document.getElementById("kpiNameEn").value.trim(),
+            name_ar: document.getElementById("kpiNameAr").value.trim(),
+            code: document.getElementById("kpiCode").value.trim(),
+            unit_type: document.getElementById("kpiUnitType").value,
+            direction: document.getElementById("kpiDirection").value,
+            percentMode: document.getElementById("kpiPercentMode").value
+          };
+          if (!existing) {
+            const created = DataAdapter.createKpi(state.db, formValues);
+            state.manager.selectedKpiId = created.id;
+            state.filters.kpiId = created.id;
+            const filterKpi = document.getElementById("filterKpi");
+            if (filterKpi) {
+              filterKpi.value = created.id;
+            }
+            const quickKpi = document.getElementById("quickKpi");
+            if (quickKpi) {
+              quickKpi.value = created.id;
+            }
+            const manualKpi = document.getElementById("manualKpi");
+            if (manualKpi) {
+              manualKpi.value = created.id;
+            }
+          } else {
+            DataAdapter.updateKpi(state.db, { ...existing, ...formValues });
+          }
+          renderFilters();
+          renderKpiManager();
+          renderManualEntry();
+          renderHeatmap();
+        });
+      }
+
+      const targetForm = document.getElementById("targetBandForm");
+      if (targetForm) {
+        targetForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const selectedKpi = state.db.kpis.find((item) => item.id === state.manager.selectedKpiId);
+          const period = document.getElementById("kpiBandPeriod").value;
+          if (!selectedKpi || !period) return;
+          state.manager.selectedPeriod = period;
+          const directExisting = state.db.targetBands.find(
+            (item) => item.kpiId === selectedKpi.id && item.period_key === period
+          );
+          const defaultExisting = state.db.targetBands.find(
+            (item) => item.kpiId === selectedKpi.id && item.period_key === DEFAULT_TARGET_PERIOD
+          );
+          const converted = convertTargetBandFromUi(selectedKpi, {
+            level4: document.getElementById("bandLevel4").value,
+            level3: document.getElementById("bandLevel3").value,
+            level2: document.getElementById("bandLevel2").value,
+            level1: document.getElementById("bandLevel1").value
+          });
+          if (period === DEFAULT_TARGET_PERIOD) {
+            const payload = {
+              id: defaultExisting?.id || null,
+              kpiId: selectedKpi.id,
+              period_type: defaultExisting?.period_type || "Monthly",
+              period_key: DEFAULT_TARGET_PERIOD,
+              ...converted
+            };
+            DataAdapter.upsertTargetBand(state.db, payload);
+          } else {
+            const payload = {
+              id: directExisting?.id || null,
+              kpiId: selectedKpi.id,
+              period_type: directExisting?.period_type || "Monthly",
+              period_key: period,
+              ...converted
+            };
+            DataAdapter.upsertTargetBand(state.db, payload);
+            if (!defaultExisting) {
+              DataAdapter.upsertTargetBand(state.db, {
+                id: null,
+                kpiId: selectedKpi.id,
+                period_type: "Monthly",
+                period_key: DEFAULT_TARGET_PERIOD,
+                ...converted
+              });
+            }
+          }
+          renderKpiManager();
+          renderHeatmap();
+        });
+      }
+    }
+
+    function setupManualEntry() {
+      const manualKpi = document.getElementById("manualKpi");
+      if (manualKpi) {
+        manualKpi.addEventListener("change", () => {
+          renderManualEntry();
+        });
+      }
+      const manualForm = document.getElementById("manualEntryForm");
+      if (manualForm) {
+        manualForm.addEventListener("submit", (event) => {
+          event.preventDefault();
+          const period = document.getElementById("manualPeriod").value;
+          const brandId = document.getElementById("manualBrand").value;
+          const cityValue = document.getElementById("manualCity").value;
+          const kpiId = document.getElementById("manualKpi").value;
+          const source = document.getElementById("manualSource").value || "Manual";
+          const rawValue = document.getElementById("manualValue").value;
+          const valueNumber = parseFloat(rawValue);
+          if (!period || !brandId || !kpiId || Number.isNaN(valueNumber)) {
+            return;
+          }
+          const kpi = state.db.kpis.find((item) => item.id === kpiId);
+          if (!kpi) return;
+          const value = fromUiValue(kpi, valueNumber);
+          const cityId = cityValue ? cityValue : null;
+          const existing = state.db.actuals.find((item) => item.kpiId === kpiId && item.brandId === brandId && item.period_key === period && (cityId ? item.cityId === cityId : !item.cityId));
+          const payload = existing ? { ...existing, value, source } : { id: null, kpiId, brandId, cityId, period_key: period, value, source };
+          DataAdapter.upsertActual(state.db, payload);
+          state.filters.period = period;
+          renderFilters();
+          renderManualEntry();
+          renderHeatmap();
+          document.getElementById("manualValue").value = "";
+        });
+      }
+    }
+
+    function setupQuickDialog() {
+      document.getElementById("closeQuick").addEventListener("click", closeQuickDialog);
+      document.getElementById("quickCancel").addEventListener("click", closeQuickDialog);
+      document.getElementById("quickDialog").addEventListener("close", () => {
+        document.getElementById("quickDialog").classList.remove("animate-fade");
+      });
+      document.getElementById("quickDialog").addEventListener("cancel", (event) => {
+        event.preventDefault();
+        closeQuickDialog();
+      });
+      document.getElementById("quickForm").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const period = document.getElementById("quickPeriod").value;
+        const brandId = document.getElementById("quickBrand").value;
+        const cityId = document.getElementById("quickCity").value || null;
+        const kpiId = document.getElementById("quickKpi").value;
+        const rawInput = document.getElementById("quickValue").value;
+        const valueNumber = parseFloat(rawInput);
+        if (!period || !brandId || !kpiId || Number.isNaN(valueNumber)) {
+          return;
+        }
+        const kpi = state.db.kpis.find((item) => item.id === kpiId);
+        if (!kpi) {
+          return;
+        }
+        const value = fromUiValue(kpi, valueNumber);
+        const existing = state.db.actuals.find((item) => item.kpiId === kpiId && item.brandId === brandId && item.period_key === period && (cityId ? item.cityId === cityId : !item.cityId));
+        const payload = existing ? { ...existing, value, source: "Manual" } : { id: null, kpiId, brandId, cityId, period_key: period, value, source: "Manual" };
+        DataAdapter.upsertActual(state.db, payload);
+        closeQuickDialog();
+        renderManualEntry();
+        renderHeatmap();
+      });
+    }
+
+    function csvEscape(value) {
+      if (value === null || value === undefined) return "";
+      if (/[",\n]/.test(String(value))) {
+        return `"${String(value).replace(/"/g, '""')}"`;
+      }
+      return value;
+    }
+
+    function exportCsv() {
+      const header = ["kpi_code", "brand_code", "period_key", "value", "direction", "unit_type"].join(",");
+      const rows = state.db.actuals.map((actual) => {
+        const kpi = state.db.kpis.find((item) => item.id === actual.kpiId);
+        const brand = state.db.brands.find((item) => item.id === actual.brandId);
+        if (!kpi || !brand) return null;
+        return [kpi.code, brand.code, actual.period_key, actual.value, kpi.direction, kpi.unit_type].map(csvEscape).join(",");
+      }).filter(Boolean);
+      return [header, ...rows].join("\n");
+    }
+
+    function importCsv(text) {
+      const lines = text.trim().split(/\r?\n/);
+      if (lines.length <= 1) return;
+      const header = lines[0].split(",").map((h) => h.trim());
+      const indexes = {
+        kpi_code: header.indexOf("kpi_code"),
+        brand_code: header.indexOf("brand_code"),
+        period_key: header.indexOf("period_key"),
+        value: header.indexOf("value")
+      };
+      for (let i = 1; i < lines.length; i++) {
+        const line = lines[i];
+        if (!line.trim()) continue;
+        const cols = line.split(",");
+        const kpiCode = cols[indexes.kpi_code]?.trim();
+        const brandCode = cols[indexes.brand_code]?.trim();
+        const period = cols[indexes.period_key]?.trim();
+        const value = parseFloat(cols[indexes.value]);
+        if (!kpiCode || !brandCode || !period || Number.isNaN(value)) continue;
+        const kpi = state.db.kpis.find((item) => item.code === kpiCode);
+        const brand = state.db.brands.find((item) => item.code === brandCode);
+        if (!kpi || !brand) continue;
+        const existing = state.db.actuals.find((item) => item.kpiId === kpi.id && item.brandId === brand.id && item.period_key === period && !item.cityId);
+        const payload = existing ? { ...existing, value, source: "CSV" } : { id: null, kpiId: kpi.id, brandId: brand.id, cityId: null, period_key: period, value, source: "CSV" };
+        DataAdapter.upsertActual(state.db, payload);
+      }
+      renderManualEntry();
+      renderHeatmap();
+    }
+
+    function renderAll() {
+      applyTranslations();
+      updateDirection();
+      renderFilters();
+      renderBrandManager();
+      renderKpiManager();
+      renderManualEntry();
+      renderLegend();
+      renderInsights();
+      renderHeatmap();
+    }
+
+    function init() {
+      state.db = DataAdapter.load();
+      if (state.filters.brandId === "all" && state.db.brands.length > 0) {
+        state.filters.brandId = state.db.brands[0].id;
+      }
+      state.brandManager.selectedBrandId = state.filters.brandId || state.db.brands[0]?.id || NEW_BRAND_ID;
+      setupHeaderActions();
+      setupFilterHandlers();
+      setupBrandManager();
+      setupKpiManager();
+      setupManualEntry();
+      setupQuickDialog();
+      document.getElementById("percentToggle").value = state.uiPercentMode;
+      renderAll();
+    }
+
+    window.addEventListener("DOMContentLoaded", init);
+  </script>
+</body>
+</html>
